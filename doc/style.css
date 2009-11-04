@@ -1,0 +1,82 @@
+body {
+}
+
+#page {
+    margin: auto;
+    width: 50em;
+    color: #333;
+}
+
+h1, h2 {
+    color: #800;
+}
+
+.shadow {
+    color: #111;
+    opacity: 0.5;
+}
+
+a {
+    color: #55f;
+}
+
+a:visited {
+    color: #558;
+}
+
+a:hover {
+    color: #800;
+}
+
+.commented-text {
+    background-color: #ff0;
+}
+
+#comment-box {
+    border-top: solid 1px #ccc;
+    background: url(images/comment-box-bg.png) repeat-x top left;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+}
+
+#comment-box h2 {
+    color: #555;
+}
+
+#comment-box-inner {
+    margin: auto;
+    width: 40em;
+}
+
+#comment-box h2 {
+    margin-top: .2em;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+#comment-box p.description {
+    font-size: 80%;
+    margin: 0;
+    color: #555;
+}
+
+#comment-box form {
+    width: 50%;
+}
+
+#comment-box label {
+    display: none;
+}
+
+#comment-box #comment-body {
+    width: 100%;
+    display: block;
+}
+
+#comment-box .shadow {
+    color: #fff;
+}
+
+
