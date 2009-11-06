@@ -35,7 +35,8 @@ var Class = xpath.util.Class;
  * If at anytime during the traversal the callback function returns false, and 
  * only false (other values that evaluate to false, like null or '', won't 
  * affect the traversal), the guide will stop the traversal at that node and 
- * return.
+ * return false. Otherwise, if the traversal completes normally, the guide 
+ * returns true.
  *
  * @note When there are axes who have dashes (-) in the name, there is also a
  * corresponding guide with the dashes removed and camel-cased so it can be used
@@ -44,80 +45,94 @@ var Class = xpath.util.Class;
  */
 var guide = xpath.interpreter.guide = {
     self: function(n, cb) {
-        cb(n);
+        return cb(n) !== false;
     },
     parent: function(n, cb) {
         if (n.parentNode)
-            cb(n.parentNode);
+            return true;
+        return cb(n.parentNode) !== false;
     },
     child: function(n, cb) {
         var kids = n.childNodes;
         for (var i = 0, len = kids.length; i < len; i++)
-            cb(kids[i]);
+            if (cb(kids[i]) === false)
+                return false;
+        return true;
     },
     followingSibling: function(n, cb) {
         while (n = n.nextSibling)
-            cb(n);
+            if (cb(n) === false)
+                return false;
+        return true;
     },
     precedingSibling: function(n, cb) {
         while (n = n.previousSibling)
-            cb(n);
+            if (cb(n) === false)
+                return false;
+        return true;
     },
     ancestor: function(n, cb) {
         for (n = n.parentNode; n; n = n.parentNode)
-            cb(n);
+            if (cb(n) === false)
+                return false;
+        return true;
     },
     descendant: function(n, cb) {
         var nodeStack = Array.prototype.slice.call(n.childNodes).reverse();
         for (n = nodeStack.pop(); n !== undefined; n = nodeStack.pop()) {
-            cb(n);
+            if (cb(n) === false)
+                return false;
             for (var kids = n.childNodes, i = kids.length - 1; i >= 0; i--)
                 nodeStack.push(kids[i]);
         }
+        return true;
     },
     following: function(n, cb) {
         for (; n; n = n.parentNode) {
-            guide.followingSibling(n, function(sib) {
-                    guide.descendant-or-self(sib);
-                });
+            if (guide.followingSibling(n, function(sib) {
+                        return guide.descendant-or-self(sib);
+                    }) === false)
+                return false;
         }
+        return true;
     },
     preceding: function(n, cb) {
         for (; n; n = n.parentNode) {
-            guide.precedingSibling(n, function(sib) {
-                    guide.reverseOrderDescendant(sib, cb);
-                    cb(sib);
-                });
+            if (guide.precedingSibling(n, function(sib) {
+                        return guide.reverseOrderDescendant(sib, cb);
+                    }) === false)
+                return false;
         }
+        return true;
     },
     ancestorOrSelf: function(n, cb) {
-        cb(n);
-        guide.ancestor(n, cb);
+        return cb(n) !== false && guide.ancestor(n, cb) !== false;
     },
     descendantOrSelf: function(n, cb) {
-        cb(n);
-        guide.descendant(n, cb);
+        return cb(n) !== false && guide.descendant(n, cb) !== false;
     },
     attribute: function(n, cb) {
-        // Ignore non-ELEMENT node types
-        if (n.nodeType != 1)
-            return;
-            
-        // .attributes is a NamedNodeMaps. In FF [] is overwritten... arrayish
-        var attrs = n.attributes;
-        for (var i = 0, len = attrs.length; i < len; i++)
-            cb(attrs[i]);
+        // Only ELEMENT node types have attributes
+        if (n.nodeType == 1) {
+            var attrs = n.attributes;   // attrs is a NamedNodeMap
+            for (var i = 0, len = attrs.length; i < len; i++)
+                if (cb(attrs[i]) === false)
+                    return false;
+        }
+        return true;
     },
     namespace: function(n, cb) {
         /// @todo Write namespace guide
+        return false;
     },
     reverseOrderDescendant: function(n, cb) {
         /// @todo Re-write this function to be iterative, not recursive...
         
         if (n.hasChildNodes())
             for (var k = n.lastChild; k; k = k.previousSibling)
-                guide.reverseDescendant(k);
-        cb(n);
+                if (guide.reverseDescendant(k) === false)
+                    return false;
+        return cb(n) !== false;
     },
     'following-sibling': guide.followingSibling,
     'previous-sibling': guide.previousSibling,
