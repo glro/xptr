@@ -17,9 +17,71 @@ var interpreter = xpath.interpreter = {};
 var extend = xpath.util.extend;
 var Class = xpath.util.Class;
 
+var XPathExpression = Class({
+    evaluate: function(context) {
+    }
+});
+
+var Compiler = Class({
+    compile: function(ast) {
+        var compVisitor = new CompilerVisitor();
+        ast.accept(compVisitor);
+        return null;
+    }
+});
+
+
+var CompilerVisitor = Class(xpath.ast.ASTVisitor, {
+    init: function() {
+        this.steps = [];
+    },
+    visitXPathExprNode: function() {
+        
+    },
+    visitPathNode: nop,
+    visitStepNode: nop,
+    visitPredicateListNode: nop,
+    visitPredicateNode: nop,
+    visitNodeTestNode: nop,
+    visitArgumentListNode: nop,
+    visitNumberNode: nop,
+    visitLiteralNode: nop,
+    visitVariableRefNode: nop,
+    visitFunctionCallNode: nop,
+    visitPathExprNode: nop,
+    visitFilterExprNode: nop,
+    visitUnionExprNode: nop,
+    visitOrExprNode: nop,
+    visitAndExprNode: nop,
+    visitEqExprNode: nop,
+    visitNeqExprNode: nop,
+    visitLtExprNode: nop,
+    visitGtExprNode: nop,
+    visitLteExprNode: nop,
+    visitGteExprNode: nop,
+    visitAddExprNode: nop,
+    visitSubExprNode: nop,
+    visitMulExprNode: nop,
+    visitDivExprNode: nop,
+    visitModExprNode: nop,
+    visitNegExprNode: nop
+});
+
+
+// getElementsByTagName could substantially speed up a search in cases where the
+// axes involves a large number of nodes, but getElementsByTagName returns a 
+// small set. Either way we have to iterate through all of either set, so, if
+// the NodeList returned by getElementsByTagName is smaller then the number of 
+// nodes searched in the guided traversal, then we should use 
+// getElementsByTagName... Of course, we also run the problem where if we have
+// a position given (eg. div[2]), then it would be faster to use the the guide.
+// I think this kind of optimization should be abstracted. Perhaps create a 
+// GuideManager that returns a "good" guide to use, given some parameters (eg.
+// predicate list, name test, axis, etc.)
+
 
 /**
- * Axis guides are functions that take 2 arguments; a node and a callback. A
+ * Axis guides are methods that take 2 arguments; a node and a callback. A
  * guide for an axis will traverse, in order, all the nodes in that axis, each
  * time calling the callback provided with the current node as the argument.
  *
@@ -42,8 +104,11 @@ var Class = xpath.util.Class;
  * corresponding guide with the dashes removed and camel-cased so it can be used
  * as an object method (ie. with a .). For example, there is a guide 
  * {@code guide['descendant-or-self'] and, also, {@code guide.descendantOrSelf}.
+ *
+ * @note The Guide is meant to be subclassed (or an instance extended) to 
+ * support new axes, should an implementation require it.
  */
-var guide = xpath.interpreter.guide = {
+xpath.interpreter.AxisGuide = Class({
     self: function(n, cb) {
         return cb(n) !== false;
     },
@@ -135,9 +200,9 @@ var guide = xpath.interpreter.guide = {
         return cb(n) !== false;
     },
     'following-sibling': guide.followingSibling,
-    'previous-sibling': guide.previousSibling,
+    'preceding-sibling': guide.precedingSibling,
     'ancestor-or-self': guide.ancestorOrSelf,
     'descendant-or-self': guide.descendantOrSelf
-};
+});
 
 })();
