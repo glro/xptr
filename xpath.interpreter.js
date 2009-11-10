@@ -4,8 +4,9 @@
  * distributed with the software; if not, you can obtain a copy here: 
  * http://www.opensource.org/licenses/isc-license.txt
  */
+
 /** @fileoverview
- * The XPath AST interpreter.
+ * The XPath AST interpreter. 
  *
  * @author Tom Switzer (switzert@windsor.ijc.org)
  */
@@ -17,17 +18,103 @@ var interpreter = xpath.interpreter = {};
 var extend = xpath.util.extend;
 var Class = xpath.util.Class;
 
-var XPathExpression = Class({
-    evaluate: function(context) {
-    }
-});
 
-var Compiler = Class({
-    compile: function(ast) {
-        var compVisitor = new CompilerVisitor();
-        ast.accept(compVisitor);
-        return null;
-    }
+/**
+ * The evaluation context is used during the evaluation of a compiled XPath 
+ * expression.
+ */
+var EvaluationContext = Class({
+
+    /**
+     * Constructs the evaluation context. This context takes the initial context
+     */
+    init: function(ctxt, vars) {
+        vars = vars || {};
+        ctxt = Object.prototype.toString.call(ctxt) == "[object Array]" ? ctxt : [ctxt];
+        if (ctxt.length == 0)
+            /// @todo Throw proper XPath error
+            throw new Error("Context size cannot be 0");
+        
+        // The list of all items to be processed
+        this.items = ctxt;
+        
+        // The current item being processed - this will always be a node
+        this.item = ctxt[0];
+        
+        // The position in the sequence of items that the current item is at.
+        // NOTE: In XPath, lists are 1-indexed; pos() = this.pos + 1
+        this.pos = 0;
+        
+        // The current size of the sequence of items being processed
+        this.size;
+        
+        // An object w/ QName: Value pairs for each variable in the expression.
+        // Variables can also be functions. If they are, then the value returned
+        // will be the return value of calling the function, the context as this
+        this.variables = extend(vars, {
+            dot: this.dot,              // $dot
+            position: this.position,    // $position
+            last: this.last,            // $last
+        });
+    },
+    
+    
+    /**
+     * Returns the current item being evaluated
+     */
+    dot: function() {
+        return this.item;
+    },
+    
+    
+    /**
+     * Returns the XPath position of the current item (ie. 1-based)
+     */
+    position: function() {
+        return this.pos + 1;
+    },
+    
+    
+    /**
+     * Returns the size of the context/position of the last item in the context
+     */
+    last: function() {
+        return this.items.length;
+    },
+    
+    
+    /**
+     * Returns the value of the variable referenced by {@code varRef}.
+     *
+     * @param varRef The name of the variable
+     * @return The value of the variable {@code varRef}
+     * @throws Error if there is no variable with name {@code varRef}
+     */
+    getValue: function(varRef) {
+        if (typeof this.variables[varRef] == "undefined") {
+            /// @todo Raise proper exception
+            throw new Error("XPath Variable " + varRef + " is undefined.");
+        }
+        
+        var value = this.variables[varRef];
+        
+        /// @todo Apparently this will fail in IE in "cross-window calls"
+        /// Fix: http://code.google.com/p/closure-library/source/browse/trunk/closure/goog/base.js#597
+        return typeof value == "function" ? value.call(this) : value;
+    },
+    
+    
+    /**
+     * Sets the value of the variable with reference {@code varRef}.
+     * 
+     * @param varRef The name used to reference the variable.
+     * @param value  The value of the variable
+     * @return {@code value}
+     */
+     setValue: function(varRef, value) {
+        /// @todo Should ensure varRef is not dot, last, or position
+        return this.variables[varRef] = value;
+     }
 });
 
 
