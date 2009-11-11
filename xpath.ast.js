@@ -42,7 +42,7 @@ ast.Node = Class({
      */
     accept: function(visitor) {
         // Call the node-specific visit method; eg. 
-        // visitor.visitSomeNode(this);
+        // return visitor.visitSomeNode(this);
     }
 });
 
@@ -75,7 +75,7 @@ ast.XPathExprNode = Class(ast.ExprNode, {
         this.expr = expr;
     },
     accept: function(visitor) {
-        visitor.visitXPathExprNode(this);
+        return visitor.visitXPathExprNode(this);
     }
 });
 
@@ -101,13 +101,13 @@ ast.PathNode = Class(ast.Node, {
             return this;
     },
     accept: function(visitor) { 
-        visitor.visitPathNode(this); 
+        return visitor.visitPathNode(this); 
     }
 });
 
 
 /**
- * StepNode represents a single step in a path. A step as an axis, a node test,
+ * StepNode represents a single step in a path. A step has an axis, a node test,
  * and any predicates that refine the set.
  */
 ast.StepNode = Class(ast.Node, {
@@ -117,7 +117,7 @@ ast.StepNode = Class(ast.Node, {
         this.predicates = (typeof predicates == "undefined" ? new ast.PredicateListNode() : predicates);
     },
     accept: function(visitor) {
-        visitor.visitStepNode(this);
+        return visitor.visitStepNode(this);
     }
 });
 
@@ -137,7 +137,7 @@ ast.PredicateListNode = Class(ast.Node, {
         return this.predicates.length == 0;
     },
     accept: function(visitor) {
-        visitor.visitPredicateListNode(this);
+        return visitor.visitPredicateListNode(this);
     }
 });
 
@@ -152,7 +152,7 @@ ast.PredicateNode = Class(ast.Node, {
         this.expr = expr;
     },
     accept: function(visitor) {
-        visitor.visitPredicateNode(this);
+        return visitor.visitPredicateNode(this);
     }
 });
 
@@ -171,7 +171,7 @@ ast.NodeTestNode = Class(ast.Node, {
         this.args = (typeof args == "undefined" ? new ast.ArgumentListNode() : args);
     },
     accept: function(visitor) {
-        visitor.visitNodeTestNode(this);
+        return visitor.visitNodeTestNode(this);
     }
 });
 
@@ -190,7 +190,7 @@ ast.ArgumentListNode = Class(ast.Node, {
         return this;
     },
     accept: function(visitor) {
-        visitor.visitArgumentListNode(this);
+        return visitor.visitArgumentListNode(this);
     }
 });
 
@@ -210,7 +210,7 @@ ast.NumberNode = Class(ast.ExprNode, {
         this.val = num;
     },
     accept: function(visitor) {
-        visitor.visitNumberNode(this);
+        return visitor.visitNumberNode(this);
     }
 });
 
@@ -224,7 +224,7 @@ ast.LiteralNode = Class(ast.ExprNode, {
         this.val = literal;
     },
     accept: function(visitor) {
-        visitor.visitLiteralNode(this);
+        return visitor.visitLiteralNode(this);
     }
 });
 
@@ -237,7 +237,7 @@ ast.VariableRefNode = Class(ast.ExprNode, {
         this.varRef = varRef;
     },
     accept: function(visitor) {
-        visitor.visitVariableRefNode(this);
+        return visitor.visitVariableRefNode(this);
    }
 });
 
@@ -252,7 +252,7 @@ ast.FunctionCallNode = Class(ast.ExprNode, {
         this.args = args;
     },
     accept: function(visitor) {
-        visitor.visitFunctionCallNode(this);
+        return visitor.visitFunctionCallNode(this);
     }
 });
 
@@ -278,7 +278,7 @@ ast.PathExprNode = Class(ast.ExprNode, {
         this.path = path;
     },
     accept: function(visitor) {
-        visitor.visitPathExprNode(this);
+        return visitor.visitPathExprNode(this);
     }
 });
 
@@ -298,7 +298,7 @@ ast.FilterExprNode = Class(ast.ExprNode, {
         this.predicates = predicates;
     },
     accept: function(visitor) {
-        visitor.visitFilterExprNode(this);
+        return visitor.visitFilterExprNode(this);
     }
 });
 
@@ -310,7 +310,7 @@ ast.FilterExprNode = Class(ast.ExprNode, {
  */
 ast.UnionExprNode = Class(ast.BinaryOpNode, {
     accept: function(visitor) {
-        visitor.visitUnionExprNode(this);
+        return visitor.visitUnionExprNode(this);
     }
 });
 
@@ -328,49 +328,49 @@ ast.BoolExpr = Class(ast.BinaryOpNode);
 
 ast.OrExprNode = Class(ast.BoolExpr, {
     accept: function(visitor) {
-        visitor.visitOrExprNode(this);
+        return visitor.visitOrExprNode(this);
     }
 });
 
 ast.AndExprNode = Class(ast.BoolExpr, {
     accept: function(visitor) {
-        visitor.visitAndExprNode(this);
+        return visitor.visitAndExprNode(this);
     }
 });
 
 ast.EqExprNode = Class(ast.BoolExpr, {
     accept: function(visitor) {
-        visitor.visitEqExprNode(this);
+        return visitor.visitEqExprNode(this);
     }
 });
 
 ast.NeqExprNode = Class(ast.BoolExpr, {
     accept: function(visitor) {
-        visitor.visitNeqExprNode(this);
+        return visitor.visitNeqExprNode(this);
     }
 });
 
 ast.LtExprNode = Class(ast.BoolExpr, {
     accept: function(visitor) {
-        visitor.visitLtExprNode(this);
+        return visitor.visitLtExprNode(this);
     }
 });
 
 ast.GtExprNode = Class(ast.BoolExpr, {
     accept: function(visitor) {
-        visitor.visitGtExprNode(this);
+        return visitor.visitGtExprNode(this);
     }
 });
 
 ast.LteExprNode = Class(ast.BoolExpr, {
     accept: function(visitor) {
-        visitor.visitLteExprNode(this);
+        return visitor.visitLteExprNode(this);
     }
 });
 
 ast.GteExprNode = Class(ast.BoolExpr, {
     accept: function(visitor) {
-        visitor.visitGteExprNode(this);
+        return visitor.visitGteExprNode(this);
     }
 });
 
@@ -383,31 +383,31 @@ ast.GteExprNode = Class(ast.BoolExpr, {
 
 ast.AddExprNode = Class(ast.BinaryOpExpr, {
     accept: function(visitor) {
-        visitor.visitAddExprNode(this);
+        return visitor.visitAddExprNode(this);
     }
 });
 
 ast.SubExprNode = Class(ast.BinaryOpExpr, {
     accept: function(visitor) {
-        visitor.visitSubExprNode(this);
+        return visitor.visitSubExprNode(this);
     }
 });
 
 ast.MulExprNode = Class(ast.BinaryOpExpr, {
     accept: function(visitor) {
-        visitor.visitMulExprNode(this);
+        return visitor.visitMulExprNode(this);
     }
 });
 
 ast.DivExprNode = Class(ast.BinaryOpExpr, {
     accept: function(visitor) {
-        visitor.visitDivExprNode(this);
+        return visitor.visitDivExprNode(this);
     }
 });
 
 ast.ModExprNode = Class(ast.BinaryOpExpr, {
     accept: function(visitor) {
-        visitor.visitModExprNode(this);
+        return visitor.visitModExprNode(this);
     }
 });
 
@@ -421,7 +421,7 @@ ast.NegExprNode = Class(ast.Expr, {
         this.expr = expr;
     },
     accept: function(visitor) {
-        visitor.visitNegExprNode(this);
+        return visitor.visitNegExprNode(this);
     }
 });
 
