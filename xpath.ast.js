@@ -17,8 +17,7 @@
  */
 (function() {
 
-var xpath = window.xpath;
-
+var xpath = window.xpath = window.xpath || {};
 var ast = xpath.ast = {};
 
 // Create a simple "class"

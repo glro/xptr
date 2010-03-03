@@ -13,7 +13,7 @@
  */
 (function() {
 
-var xpath = window.xpath;
+var xpath = window.xpath = window.xpath || {};
 
 var Class = xpath.util.Class;
 

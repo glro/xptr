@@ -16,8 +16,8 @@
 
 (function() {
 
-var xpath = window.xpath;
-xpath.lexer = {};
+var xpath = window.xpath = window.xpath || {};
+var lexer = xpath.lexer = {};
 
 // Speed up access to some oft-used functions and objects
 var sym = xpath.symbol;

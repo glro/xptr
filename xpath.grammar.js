@@ -12,12 +12,10 @@
  */
 (function() {
 
-var xpath = window.xpath;
-xpath.parser = (typeof xpath.parser == 'undefined' ? {} : xpath.parser);
+var xpath = window.xpath = window.xpath || {};
 
 var sym = xpath.symbol;
-var g = xpath.parser.grammar = new lligen.Grammar({symbolToString: xpath.symbol.symbolToString});
-
+var g = xpath.grammar = new lligen.Grammar({symbolToString: xpath.symbol.symbolToString});
 var ast = xpath.ast;
 
 g.start( sym.S )

@@ -7,14 +7,14 @@
 
 /** @fileoverview
  * Defines the symbols used by the lexer (xpath.lexer) and grammar definition
- * (xpath.parser.grammar).
+ * (xpath.grammar).
  *
  * @author Tom Switzer (switzert@windsor.ijc.org)
  */
 
 (function() {
 
-var xpath = window.xpath;
+var xpath = window.xpath = window.xpath || {};
 
 xpath.symbol = {
     EMPTY           : -1,

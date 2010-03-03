@@ -21,9 +21,11 @@ td {
 </style>
 <script type="text/javascript" src="../../lligen.js"></script>
 <script type="text/javascript" src="../../xpath.js"></script>
+<script type="text/javascript" src="../../xpath.util.js"></script>
 <script type="text/javascript" src="../../xpath.symbol.js"></script>
 <script type="text/javascript" src="../../xpath.ast.js"></script>
-<script type="text/javascript" src="../../xpath.parser.grammar.js"></script>
+<script type="text/javascript" src="../../xpath.grammar.js"></script>
+<script type="text/javascript" src="../../xpath.parser.js"></script>
 <script type="text/javascript" src="../../xpath.lexer.js"></script>
 <script type="text/javascript" src="../../xpath.printer.js"></script>
 <script type="text/javascript" src="../jquery-1.3.2.min.js"></script>
@@ -31,7 +33,7 @@ td {
 $(document).ready(function() {
     $("#test").click(function() {
         var lexer = new xpath.lexer.Lexer($("#xpath-expr").val(), [ 'range-to' ], true);
-        var parser = xpath.parser.grammar.newParser();
+        var parser = xpath.grammar.newParser();
         var ast = parser.parse(lexer);
         var prettyPrinter = xpath.printer.newPrettyPrinter(ast);
         var listPrinter = xpath.printer.newASTListPrinter(ast);

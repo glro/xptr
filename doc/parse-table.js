@@ -75,7 +75,7 @@ var getAbbr = function(tok) {
 xpath.doc.fillGrammarTable = function(prodTable) {
     var xpath = window.xpath;
     var i, j;
-    var rules = xpath.parser.grammar.rules;
+    var rules = xpath.grammar.rules;
     var rulesArrLen = rules.length;
 
     var prevSymbol = -1;
@@ -122,7 +122,7 @@ xpath.doc.fillFirstTable = function(tbl) {
             rule = undefined;
         }
 
-        var first = xpath.parser.grammar.first(symbol, rule);
+        var first = xpath.grammar.first(symbol, rule);
         var firstStr = [];
 
         for (var j = 0; j < first.length; j++) {
@@ -135,7 +135,7 @@ xpath.doc.fillFirstTable = function(tbl) {
         return "{ " + firstStr.join(', ') + " }";
     };
 
-    var g = xpath.parser.grammar;
+    var g = xpath.grammar;
     var nonTerminals = g.nonTerminals();
 
     for (var i = 0, i_len = nonTerminals.length; i < i_len; i++) {
@@ -162,7 +162,7 @@ xpath.doc.fillFirstTable = function(tbl) {
 };
 
 xpath.doc.fillFollowTable = function(followTable) {
-    var g = xpath.parser.grammar;
+    var g = xpath.grammar;
     var nonTerminals = g.nonTerminals();
 
     for (var i = 0, len = nonTerminals.length; i < len; i++) {
@@ -186,7 +186,7 @@ xpath.doc.fillFollowTable = function(followTable) {
 };
 
 xpath.doc.fillParseTable = function(domTbl) {
-    var g = xpath.parser.grammar;
+    var g = xpath.grammar;
     var tbl = g.parseTable();
     var terms = g.terminals();
 
