@@ -61,6 +61,8 @@ var getAbbr = function(tok) {
             return "'+'";
         case sym.OP_ARI_MINUS:
             return "'-'";
+        case sym.OP_ARI_MUL:
+            return "'mul'";
         case sym.OP_ARI_DIV:
             return "'div'";
         case sym.OP_ARI_MOD:

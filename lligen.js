@@ -114,8 +114,10 @@ Grammar.prototype.terminals = function() {
         for (var j = 0, jlen = rule.rhs.length; j < jlen; j++) {
             var s = rule.rhs[j];
             
-            if (!this.prods[s] && !inT[s])
+            if (!this.prods[s] && !inT[s]) {
                 t.push(s);
+                inT[s] = true;
+            }
         }
     }
     
