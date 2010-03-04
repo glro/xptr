@@ -24,6 +24,18 @@ function isTextNode(n) { return n.nodeType == n.TEXT_NODE; }
 function isProcessingInstructionNode(n) { return n.nodeType == n.PROCESSING_INSTRUCTION_NODE; }
 function isAnyNode(n) { return true; }
 
+function createArrayContextIterator(context, nodes) {
+    return function(cb) {
+            for (var i = 0, len = nodes.length; i < len; i++) {
+                context.pos = i + 1;
+                context.item = nodes[i];
+                if (cb(context.item, context.pos) === false)
+                    return false;
+            }
+            return true;
+        };
+}
+
 
 /**
  * The evaluation context is used during the evaluation of a compiled XPath 
@@ -41,8 +53,7 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
             /// @todo Throw proper XPath error
             throw new Error("Context size cannot be 0");
         
-        // The list of all items to be processed
-        this.items = ctxt;
+        this.contextStack = [];
         
         // The current item being processed - this will always be a node
         this.item = ctxt[0];
@@ -52,7 +63,10 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
         this.pos = 0;
         
         // The current size of the sequence of items being processed
-        this.size;
+        this.size = ctxt.length;
+        
+        // An iterator to iterate over all nodes in context
+        this.iter = createArrayContextIterator(this, ctxt);
         
         // An object w/ QName: Value pairs for each variable in the expression.
         // Variables can also be functions. If they are, then the value returned
@@ -75,6 +89,39 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
     
     
     /**
+     * Saves the current context so it can be restored later.
+     */
+    pushContext: function() {
+        this.contextStack.push({iter: this.iter, size: this.size});
+    },
+    
+    
+    /**
+     * Restore the most recently saved (pushed) context.
+     */
+    popContext: function() {
+        var ctxt = this.contextStack.pop();
+        this.iter = ctxt.iter;
+        this.size = ctxt.size;
+    },
+    
+    
+    update: function(item, pos) {
+        this.item = item;
+        this.pos = pos;
+    },
+    
+    
+    /**
+     * Iterates over all nodes in the context, each time calling back the
+     * function cb with the current node.
+     */
+    contextIterator: function(cb) {
+        this.iter(cb);
+    },
+    
+    
+    /**
      * Returns the current item being evaluated
      */
     dot: function() {
@@ -86,7 +133,7 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
      * Returns the XPath position of the current item (ie. 1-based)
      */
     position: function() {
-        return this.pos + 1;
+        return this.pos;
     },
     
     
@@ -94,7 +141,24 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
      * Returns the size of the context/position of the last item in the context
      */
     last: function() {
-        return this.items.length;
+        return this.size;
+    },
+    
+    /**
+      * Converts obj to a boolean value according to XPath.
+      */
+     boolean: function(obj) {
+        switch (typeof obj) {
+        case "boolean":
+            return obj;
+        case "number":
+            return obj != 0 || isNaN(obj);
+            
+        case "string":
+            return obj.length != 0;
+        default:
+            return typeof obj.length == "number" && obj.length != 0;
+        }
     },
     
     
@@ -132,6 +196,17 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
      },
      
      
+     /**
+      * Returns an axis guide for axis. By default, this function supports all
+      * standard axes specified by XPath 1. The axis guide returned is a
+      * function that takes 2 arguments, a node and a callback. The first
+      * argument is the node to use as the context of the axis. The second
+      * argument is the callback function to call each time a new node is
+      * traversed. The callback function should take 1 argument, a node.
+      *
+      * @param axis A string describing the axis guide to return (eg. 'child')
+      * @return A function that can be used to traverse an axis for a node
+      */
      getAxisGuide: function(axis) {
         if (!this.axisGuide[axis])
             return null;
@@ -225,22 +300,25 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
     interpret: function(root) {
         this.resultStack = [];
         root.accept(this);
-        if (this.resultStack.length) {
-            return this.resultStack[0];
-        } else {
-            return null;
-        }
+        var result = [];
+        this.context.contextIterator(function(n) {
+                result.push(n);
+            });
+        return result;
     },
     
     visitXPathExprNode: function(n) {
         n.expr.accept(this);
     },
     
+    /* Initialize the context for a new path. If the path is absolute, then the
+     * context is simply initialized to the document, otherwise the context
+     * is not modified.
+     */
     visitPathNode: function(path) {
         if (path.isAbsolute) {
-            this.resultStack.push([this.context.document]);
-        } else {
-            this.resultStack.push(this.context.items);
+            this.context.size = 1;
+            this.context.iter = createArrayContextIterator(this.context, [this.context.document]);
         }
         
         for (var i = 0, numSteps = path.steps.length; i < numSteps; i++) {
@@ -255,32 +333,50 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
      * apply the predicates, in order.
      */
     visitStepNode: function(step) {
-        var nodes = this.resultStack.pop();
-        var guide = this.context.getAxisGuide(step.axis);
-        
-        // If the axis doesn't exist, then guide will be undefined. This is a
-        // user error.
+        var guide = this.context.getAxisGuide(step.axis),
+            interpreter = this,
+            context = this.context,
+            result = [];
+            
         if (!guide)
             /// @todo Throw proper error
             throw new Error("Invalid axis: '" + step.axis + "'");
+
+        context.contextIterator(function(n) {        
+                // Save the context
+                context.pushContext();
             
-        var result = [];
-        for (var i = 0, numNodes = nodes.length; i < numNodes; i++) {
-            var pos = 1;
-            guide(nodes[i], function(n) {
-                // this.resultStack.push({pos: pos, node: n})
-                // for each predicate in predicates:
-                //    predicates.accept(this)
-                // if resultStack.pop() == true:
-                //    result.push(n)
-                result.push(n);
-                pos++;
+                // Get the count first.
+                var count = 0;
+                guide(n, function() {
+                        count++;
+                    });
+                
+                // Update the size and context iterator.
+                context.size = count;
+                context.iter = function(cb) {
+                        var count = 1;
+                        return guide(n, function(n) {
+                                context.pos = count++;
+                                context.item = n;
+                                return cb(context.item, context.pos);
+                            });
+                    };
+                
+                // Apply the predicates
+                step.nodeTest.accept(interpreter);
+                step.predicates.accept(interpreter);
+                
+                // Append the found items to the final result for the next step
+                context.contextIterator(function(m) {
+                        result.push(m);
+                    });
+                
+                // Restore the context
+                context.popContext();
             });
-        }
-        this.resultStack.push(result);
-        
-        step.nodeTest.accept(this);
-        step.predicates.accept(this);
+        this.context.size = result.length;
+        this.context.iter = createArrayContextIterator(context, result);
     },
     
     /* Predicate lists are an in-order list of all the predicates. We simply
@@ -293,15 +389,41 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         }
     },
     
+    /* Applies the predicate to the current context. It will evaluate the
+     * expression for each node in the context. If the expression is a number,
+     * then it will add the node if its position is equal to that number.
+     * Otherwise, it converts the expression's result to boolean and add the
+     * node to the new context if it evaluates to true.
+     */
     visitPredicateNode: function(predicate) {
-        // do nothing for now
+        var interpreter = this,
+            nodes = [],
+            context = this.context;
+        this.context.contextIterator(function(n) {
+        
+                /// @todo Cache result if only constants (ie. literals or numbers)
+                /// are used.
+                
+                predicate.expr.accept(interpreter);
+                var result = interpreter.resultStack.pop();
+                if (typeof result == "number") {
+                    /// @todo If number is constant, then STOP iteration
+                    if (context.position() == result)
+                        nodes.push(n);
+                    
+                } else {
+                    // Convert the result to a boolean value
+                    if (context.boolean(result))
+                        nodes.push(n);
+                }
+            });
+        context.size = nodes.length;
+        context.iter = createArrayContextIterator(context, nodes);
     },
     
-    /* Perform a Node Test on the node in the top of the stack. This will check
-     * both name tests and node type tests.
+    /* Perform a Node Test on the nodes in the current context.
      */
     visitNodeTestNode: function(nodeTest) {
-        var nodes = this.resultStack.pop();
         var parts = nodeTest.name.split(":"),
             localName = parts.length > 1 ? parts[1] : parts[0],
             namespaceURI = parts.length > 1 ? parts[0] : null;
@@ -314,46 +436,107 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
             throw new Error("Invalid node type in node test: '" + nodeTest.type + "'");
         }
         
-        results = [];
-        for (var i = 0, numNodes = nodes.length; i < numNodes; i++) {
-            var n = nodes[i];
-            
-            // Perform the name test, if any
-            if (localName != '*' || namespaceURI != null) {
-                var expandedName = this.context.getExpandedName(n);
-                if (expandedName == null
-                    || (localName != '*' && localName != expandedName.localName)
-                    || namespaceURI != expandedName.namespaceURI) {
-                    // Skip this node
-                    continue;
-                }
-            }
-            
-            // Perform the node type check, if any
-            if (nodeTypeCheck && !nodeTypeCheck(n))
-                continue;
-            
-            results.push(n);
-        }
+        // Don't want to overwrite axis iterator if we can avoid it
+        if (localName == '*' && namespaceURI == null && nodeTest.type == "node")
+            return;
         
-        this.resultStack.push(results);
+        // Get all matching nodes an update the context with an array iterator.
+        var results = [],
+            context = this.context;
+        this.context.contextIterator(function(n) {
+                // Perform the name test, if any
+                if (localName != '*' || namespaceURI != null) {
+                    var expandedName = context.getExpandedName(n);
+                    if (expandedName == null
+                        || (localName != '*' && localName != expandedName.localName)
+                        || namespaceURI != expandedName.namespaceURI) {
+                        return true;    // Skip this node
+                    }
+                }
+                
+                // Perform the node type check, if any
+                if (nodeTypeCheck && !nodeTypeCheck(n))
+                    return true;        // Skip this node
+                
+                results.push(n);
+            });
+        context.size = results.length;
+        context.iter = createArrayContextIterator(context, results);
     },
     
-    visitArgumentListNode: nop,
-    visitNumberNode: nop,
-    visitLiteralNode: nop,
-    visitVariableRefNode: nop,
+    /* Each argument is an expression, so each expression is evaluated, in
+     * order, and pushed onto the stack. The values stored on the result stack 
+     * will be in reverse order.
+     */
+    visitArgumentListNode: function(argList) {
+        var args = argsList.args;
+        for (var i = 0; i < args.length; i++) {
+            args.accept(this);
+        }
+    },
+    
+    visitNumberNode: function(num) {
+        this.resultStack.push(num.val);
+    },
+    
+    visitLiteralNode: function(literal) {
+        this.resultStack.push(literal.val);
+    },
+    
+    /* The variable's value is grabbed from the context and pushed onto the
+     * stack.
+     */
+    visitVariableRefNode: function(varRef) {
+        try {
+            this.resultStack.push(this.context.getValue(varRef));
+        } catch (e) {
+            throw new Error("Variable '$" + varRef + "' does not map to any value.");
+        }
+    },
+    
     visitFunctionCallNode: nop,
+    
+    /* A path expression node just holds a reference to a filter expression and
+     * a path. Either can be null, but not both.
+     */
     visitPathExprNode: function(pathExpr) {
         if (pathExpr.filterExpr)
             pathExpr.filterExpr.accept(this);
         if (pathExpr.path)
             pathExpr.path.accept(this);
     },
+    
     visitFilterExprNode: nop,
     visitUnionExprNode: nop,
-    visitOrExprNode: nop,
-    visitAndExprNode: nop,
+    
+    /* An "or" expression first evaluates the LHS. If it evaluates to true, then
+     * the value of the LHS is pushed onto the result stack and the RHS is not
+     * evaluated. Otherwise the RHS is evaluated and the result of the RHS is
+     * pushed onto the result stack.
+     */
+    visitOrExprNode: function(or) {
+        or.lhs.accept(this);
+        var lhs = this.resultStack.pop();
+        if (this.context.boolean(lhs))
+            this.resultStack.push(lhs);
+        else
+            or.rhs.accept(this);    // Keep the result on the stack
+    },
+    
+    /* An "and" expression first evaluates the LHS. If it evaluates to false,
+     * then the value of the LHS is pushed onto the result stack and the RHS is
+     * not evaluated. Otherwise, the result of the evaluation of the RHS is
+     * pushed onto the result stack.
+     */
+    visitAndExprNode: function(and) {
+        and.lhs.accept(this);
+        var lhs = this.resultStack.pop();
+        if (!this.context.boolean(lhs))
+            this.resultStack.push(lhs);
+        else
+            and.rhs.accept(this);   // Keep the result on the stack
+    },
+    
     visitEqExprNode: nop,
     visitNeqExprNode: nop,
     visitLtExprNode: nop,
