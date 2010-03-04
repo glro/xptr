@@ -69,6 +69,54 @@ xpath.util = {
         Klass.prototype.init = Klass.prototype.init || function() {};
         return (Klass.prototype.constructor = Klass);
     },
+    
+    /**
+     * Searches for val in list and returns its index. If val cannot be found in
+     * list, then this returns the index at which to insert val, while keeping 
+     * the list in sorted order. If l or r are given, then this operates on a 
+     * portion of the list, between [l,r). If cmp is give, then it will be used 
+     * to compare 2 elements. cmp should be a function that takes 2 arguments, a
+     * and b, and returns < 0 if a < b, 0 if a == b, > 0 if a > b. If cmp is not
+     * given, then the "natural" ordering (< and ==) is used instead. This is
+     * guaranteed to run in O(log n) time, where n = r - l.
+     *
+     * @param list An array to search for val within
+     * @param val The value to search for in the array
+     * @param l The lower bound (inclusive) of the array to search in
+     * @param r The upper bound (exclusive) of the array to search in
+     * @param cmp A comparator to use to determine ordering
+     * @return The index of val in the list (or where it should go)
+     */
+    binarySearch: function(list, val, l, r, cmp) {
+        l = l || 0;
+        r = (!r || r <= l) ? list.length : r;
+        while (l < r) {
+            c = (l + r) / 2;
+            if (list[c] == val)
+                return c;
+            if (cmp && cmp(list[c], val) < 0 || list[c] < 0)
+                l = c + 1;
+            else
+                r = c;
+        }
+        return l;
+    },
+    
+    /**
+     * A rather involved comparator that let's us compare nodes so they can
+     * be sorted or stored in a tree.
+     */
+    nodeComparator: function(n, m) {
+        if (n.nodeType != m.nodeType)
+            return n.nodeType < m.nodeType ? -1 : 1;
+        if (n.nodeName != m.nodeName)
+            return n.nodeName < m.nodeName ? -1 : 1;
+        if (n.nodeValue != m.nodeValue)
+            return n.nodeValue < m.nodeValue ? -1 : 1;
+        if (n.childNodes.length != m.childNodes.length)
+            return n.childNodes.length < m.childNodes.length ? -1 : 1;
+        return 0;
+    },
 };
 
 })();

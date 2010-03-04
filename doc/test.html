@@ -17,7 +17,16 @@
 <script type="text/javascript">
 $(function() {
     $("#xpath-run").click(function() {
-        alert(xpath.eval($("#xpath-expr").val()));
+        var nodes = xpath.eval($("#xpath-expr").val());
+        var out = $("#output");
+        out.empty();
+        out.append("<h2>Found " + nodes.length + " Nodes</h2>");
+        var list = $("<ul></ul>");
+        for (var i = 0; i < nodes.length; i++) {
+            var n = nodes[i];
+            list.append("<li>" + n.nodeName + ": " + n.nodeValue + "</li>");
+        }
+        out.append(list);
         return false;
     });
 });
@@ -31,6 +40,8 @@ $(function() {
                 <input id="xpath-expr" />
                 <input id="xpath-run" type="button" value="Run..." />
             </form>
+            <div id="output">
+            </div>
             <h2>A Heading</h2>
             <p>Hi there.</p>
             <p>Bye now.</p>

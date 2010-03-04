@@ -266,8 +266,15 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
             
         var result = [];
         for (var i = 0, numNodes = nodes.length; i < numNodes; i++) {
+            var pos = 1;
             guide(nodes[i], function(n) {
+                // this.resultStack.push({pos: pos, node: n})
+                // for each predicate in predicates:
+                //    predicates.accept(this)
+                // if resultStack.pop() == true:
+                //    result.push(n)
                 result.push(n);
+                pos++;
             });
         }
         this.resultStack.push(result);
