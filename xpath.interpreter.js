@@ -92,7 +92,12 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
      * Saves the current context so it can be restored later.
      */
     pushContext: function() {
-        this.contextStack.push({iter: this.iter, size: this.size});
+        this.contextStack.push({
+                iter: this.iter,
+                size: this.size,
+                item: this.item,
+                pos: this.pos
+            });
     },
     
     
@@ -103,6 +108,8 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
         var ctxt = this.contextStack.pop();
         this.iter = ctxt.iter;
         this.size = ctxt.size;
+        this.item = ctxt.item;
+        this.pos  = ctxt.pos;
     },
     
     
@@ -153,7 +160,6 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
             return obj;
         case "number":
             return obj != 0 || isNaN(obj);
-            
         case "string":
             return obj.length != 0;
         default:
@@ -299,26 +305,35 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
     
     interpret: function(root) {
         this.resultStack = [];
+        
         root.accept(this);
-        var result = [];
-        this.context.contextIterator(function(n) {
-                result.push(n);
-            });
+        
+        var result = this.resultStack.pop();
+        if (typeof result == "undefined")
+            return null;
         return result;
     },
     
+    /* An XPathExprNode is just a top level node for an expression, but has no
+     * real value as of now.
+     */
     visitXPathExprNode: function(n) {
         n.expr.accept(this);
     },
     
     /* Initialize the context for a new path. If the path is absolute, then the
      * context is simply initialized to the document, otherwise the context
-     * is not modified.
+     * is initialized the current item. This does preserve the context. If the
+     * context should be preserved, then a call to this method must be wrapped
+     * in a pushContext()/popContext() pair.
      */
     visitPathNode: function(path) {
         if (path.isAbsolute) {
             this.context.size = 1;
             this.context.iter = createArrayContextIterator(this.context, [this.context.document]);
+        } else {
+            this.context.size = 1;
+            this.context.iter = createArrayContextIterator(this.context, [this.context.item]);
         }
         
         for (var i = 0, numSteps = path.steps.length; i < numSteps; i++) {
@@ -426,18 +441,22 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
     visitNodeTestNode: function(nodeTest) {
         var parts = nodeTest.name.split(":"),
             localName = parts.length > 1 ? parts[1] : parts[0],
-            namespaceURI = parts.length > 1 ? parts[0] : null;
+            namespaceURI = parts.length > 1 ? parts[0] : null,
+            args = [];
         
-        /// @todo args is actually a Node, and needs to processed normally...
-        var nodeTypeCheck = this.context.getNodeTypeTest(nodeTest.type, nodeTest.args);
-        
+        if (nodeTest.args) {
+            nodeTest.args.accept(this);
+            var numArgs = nodeTest.args.args.length;
+            args = this.resultStack.splice(-numArgs);   // Pop off numArgs items
+        }
+        var nodeTypeCheck = this.context.getNodeTypeTest(nodeTest.type, args);
         if (nodeTest.type && !nodeTypeCheck) {
             /// @todo Throw a proper error
             throw new Error("Invalid node type in node test: '" + nodeTest.type + "'");
         }
         
         // Don't want to overwrite axis iterator if we can avoid it
-        if (localName == '*' && namespaceURI == null && nodeTest.type == "node")
+        if (localName == '*' && namespaceURI == null && (!nodeTest.type || nodeTest.type == "node"))
             return;
         
         // Get all matching nodes an update the context with an array iterator.
@@ -469,7 +488,7 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
      * will be in reverse order.
      */
     visitArgumentListNode: function(argList) {
-        var args = argsList.args;
+        var args = argList.args;
         for (var i = 0; i < args.length; i++) {
             args.accept(this);
         }
@@ -496,14 +515,26 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
     
     visitFunctionCallNode: nop,
     
-    /* A path expression node just holds a reference to a filter expression and
-     * a path. Either can be null, but not both.
+    /* This is an expression, which mean the result is pushed onto the stack.
+     * More specifically, this will put the nodes found onto the top of the 
+     * result stack. The context will be saved/restored at the start/end of this
+     * method.
      */
     visitPathExprNode: function(pathExpr) {
+        this.context.pushContext();
+        
         if (pathExpr.filterExpr)
             pathExpr.filterExpr.accept(this);
         if (pathExpr.path)
             pathExpr.path.accept(this);
+        
+        var result = [];
+        this.context.contextIterator(function(n) {
+                result.push(n);
+            });
+        this.resultStack.push(result);
+        
+        this.context.popContext();
     },
     
     visitFilterExprNode: nop,
