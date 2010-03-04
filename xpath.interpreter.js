@@ -77,6 +77,13 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
             last: this.last,            // $last
         });
         
+        this.functions = {
+            boolean: function(context, obj) { return context.boolean(obj); },
+            position: function(context) { return context.position(); },
+            last: function(context) { return context.last(); },
+            count: function(context, nodeSet) { return nodeSet.length; }
+        };
+        
         // The owning document of the context items/nodes
         if (this.item.nodeType == this.item.DOCUMENT_NODE)
             this.document = this.item;
@@ -272,7 +279,8 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
         case 1:     // ELEMENT_NODE
         case 2:     // ATTRIBUTE_NODE
             // Note: This may be wrong, but node.namespaceURI returns null in FF
-            //       and localName returns the prefix (eg. xml:lang).
+            //       and localName returns the prefix (eg. xml:lang). Also,
+            //       localName doesn't exist in IE (untested, based on w3c site)
             var parts = node.nodeName.split(":");
             if (parts.length > 1) {
                 localName = parts[1];
