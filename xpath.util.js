@@ -117,6 +117,16 @@ xpath.util = {
             return n.childNodes.length < m.childNodes.length ? -1 : 1;
         return 0;
     },
+    
+    newBoolean: function(booleanValue) {
+            return { type: xpath.type.BOOLEAN_TYPE, value: booleanValue };
+        },
+    newNumber: function(numberValue) {
+            return { type: xpath.type.NUMBER_TYPE, value: numberValue };
+        },
+    newString: function(stringValue) {
+            return { type: xpath.type.STRING_TYPE, value: stringValue };
+        }
 };
 
 })();

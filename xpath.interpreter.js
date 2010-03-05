@@ -77,12 +77,7 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
             last: this.last,            // $last
         });
         
-        this.functions = {
-            boolean: function(context, obj) { return context.boolean(obj); },
-            position: function(context) { return context.position(); },
-            last: function(context) { return context.last(); },
-            count: function(context, nodeSet) { return nodeSet.length; }
-        };
+        this.functions = xpath.core;
         
         // The owning document of the context items/nodes
         if (this.item.nodeType == this.item.DOCUMENT_NODE)
@@ -161,17 +156,23 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
     /**
       * Converts obj to a boolean value according to XPath.
       */
-     boolean: function(obj) {
-        switch (typeof obj) {
-        case "boolean":
-            return obj;
-        case "number":
-            return obj != 0 || isNaN(obj);
-        case "string":
-            return obj.length != 0;
+     boolean: function(result) {
+        var bValue = false;
+        switch (result.type) {
+        case xpath.type.BOOLEAN_TYPE:
+            bValue = result.value;
+            break;
+        case xpath.type.NUMBER_TYPE:
+            bValue = result.value != 0 || isNaN(result.value);
+            break;
+        case xpath.type.STRING_TYPE:
+            bValue = result.value.length != 0;
+            break;
         default:
-            return typeof obj.length == "number" && obj.length != 0;
+            // Node Set of some sort
+            bValue = result.value.length != 0;
         }
+        return { type: xpath.type.BOOLEAN_TYPE, value: bValue };
     },
     
     
@@ -192,7 +193,16 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
         
         /// @todo Apparently this will fail in IE in "cross-window calls"
         /// Fix: http://code.google.com/p/closure-library/source/browse/trunk/closure/goog/base.js#597
-        return typeof value == "function" ? value.call(this) : value;
+        if (typeof value == "function")
+            value = value.call(this);
+        switch (typeof value) {
+        case "boolean":
+            return xpath.util.newBoolean(value);
+        case "number":
+            return xpath.util.newNumber(value);
+        case "string":
+            return xpath.util.newString(value);
+        }
     },
     
     
@@ -206,6 +216,21 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
      setValue: function(varRef, value) {
         /// @todo Should ensure varRef is not dot, last, or position
         return this.variables[varRef] = value;
+     },
+     
+     
+     /**
+      * Call a function in the function library with name funcName using 
+      * arguments args. The return type depends on the function being called.
+      *
+      * @param funcName A string with the function name to call
+      * @param args An array of arguments to apply to the function
+      */
+     call: function(funcName, args) {
+        var func = this.functions[funcName];
+        if (typeof func == "undefined")
+            throw new Error("The function '" + funcName + "' does not exist.");
+        func.apply(this, args);
      },
      
      
@@ -429,7 +454,7 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
                 
                 predicate.expr.accept(interpreter);
                 var result = interpreter.resultStack.pop();
-                if (typeof result == "number") {
+                if (result.type == xpath.type.NUMBER_TYPE) {
                     /// @todo If number is constant, then STOP iteration
                     if (context.position() == result)
                         nodes.push(n);
@@ -521,7 +546,16 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         }
     },
     
-    visitFunctionCallNode: nop,
+    /* This evalutes all arguments first, then uses the results as the arguments
+     * to the function. The function is called using the call() method on the
+     * context, passing in the name and args and the result is stored on the
+     * result stack.
+     */
+    visitFunctionCallNode: function(func) {
+        func.args.accept(this);
+        var args = this.resultStack.splice(-func.args.args.length);
+        this.resultStack.push(this.context.call(func['name'], args));
+    },
     
     /* This is an expression, which mean the result is pushed onto the stack.
      * More specifically, this will put the nodes found onto the top of the 
