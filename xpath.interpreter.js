@@ -36,6 +36,8 @@ function createArrayContextIterator(context, nodes) {
         };
 }
 
+// Local reference to xpath.core
+var core = xpath.core;
 
 /**
  * The evaluation context is used during the evaluation of a compiled XPath 
@@ -77,7 +79,7 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
             last: this.last,            // $last
         });
         
-        this.functions = xpath.core;
+        this.functions = xpath.core.library;
         
         // The owning document of the context items/nodes
         if (this.item.nodeType == this.item.DOCUMENT_NODE)
@@ -154,25 +156,10 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
     },
     
     /**
-      * Converts obj to a boolean value according to XPath.
-      */
-     boolean: function(result) {
-        var bValue = false;
-        switch (result.type) {
-        case xpath.type.BOOLEAN_TYPE:
-            bValue = result.value;
-            break;
-        case xpath.type.NUMBER_TYPE:
-            bValue = result.value != 0 || isNaN(result.value);
-            break;
-        case xpath.type.STRING_TYPE:
-            bValue = result.value.length != 0;
-            break;
-        default:
-            // Node Set of some sort
-            bValue = result.value.length != 0;
-        }
-        return { type: xpath.type.BOOLEAN_TYPE, value: bValue };
+     * Converts obj to a boolean value according to XPath.
+     */
+    boolean: function(result) {
+        return this.call("boolean", [result]);
     },
     
     
@@ -197,12 +184,18 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
             value = value.call(this);
         switch (typeof value) {
         case "boolean":
-            return xpath.util.newBoolean(value);
+            return core.newBoolean(value);
         case "number":
-            return xpath.util.newNumber(value);
+            return core.newNumber(value);
         case "string":
-            return xpath.util.newString(value);
+            return core.newString(value);
+        default:
+            // We'll naively assume its elements are nodes for now
+            if (typeof value.length == "number")
+                return core.newNodeSet(value);
         }
+        // Can't convert the variable's value to a known type.
+        throw new Error("The type of variable '$" + varRef + "' cannot be determined.");
     },
     
     
@@ -227,10 +220,10 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
       * @param args An array of arguments to apply to the function
       */
      call: function(funcName, args) {
-        var func = this.functions[funcName];
+        var func = this.functions.getFunction(funcName);
         if (typeof func == "undefined")
             throw new Error("The function '" + funcName + "' does not exist.");
-        func.apply(this, args);
+        return func.apply(this, args);
      },
      
      
@@ -283,7 +276,7 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
             } else if (args.length == 1) {
                 return function(n) {
                         return n.nodeType == n.PROCESSING_INSTRUCTION_NODE
-                               && n.target == args[0];
+                               && n.target == args[0].value;
                     };
             }
         }
@@ -344,7 +337,7 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         var result = this.resultStack.pop();
         if (typeof result == "undefined")
             return null;
-        return result;
+        return result.value;
     },
     
     /* An XPathExprNode is just a top level node for an expression, but has no
@@ -454,14 +447,14 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
                 
                 predicate.expr.accept(interpreter);
                 var result = interpreter.resultStack.pop();
-                if (result.type == xpath.type.NUMBER_TYPE) {
+                if (result.type == core.NUMBER) {
                     /// @todo If number is constant, then STOP iteration
-                    if (context.position() == result)
+                    if (context.position() == result.value)
                         nodes.push(n);
                     
                 } else {
                     // Convert the result to a boolean value
-                    if (context.boolean(result))
+                    if (context.boolean(result).value)
                         nodes.push(n);
                 }
             });
@@ -491,7 +484,7 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         // Don't want to overwrite axis iterator if we can avoid it
         if (localName == '*' && namespaceURI == null && (!nodeTest.type || nodeTest.type == "node"))
             return;
-        
+
         // Get all matching nodes an update the context with an array iterator.
         var results = [],
             context = this.context;
@@ -523,16 +516,16 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
     visitArgumentListNode: function(argList) {
         var args = argList.args;
         for (var i = 0; i < args.length; i++) {
-            args.accept(this);
+            args[i].accept(this);
         }
     },
     
     visitNumberNode: function(num) {
-        this.resultStack.push(num.val);
+        this.resultStack.push(core.newNumber(num.val));
     },
     
     visitLiteralNode: function(literal) {
-        this.resultStack.push(literal.val);
+        this.resultStack.push(core.newString(literal.val));
     },
     
     /* The variable's value is grabbed from the context and pushed onto the
@@ -557,7 +550,7 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         this.resultStack.push(this.context.call(func['name'], args));
     },
     
-    /* This is an expression, which mean the result is pushed onto the stack.
+    /* This is an expression, which means the result is pushed onto the stack.
      * More specifically, this will put the nodes found onto the top of the 
      * result stack. The context will be saved/restored at the start/end of this
      * method.
@@ -574,7 +567,7 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         this.context.contextIterator(function(n) {
                 result.push(n);
             });
-        this.resultStack.push(result);
+        this.resultStack.push(core.newNodeSet(result));
         
         this.context.popContext();
     },
@@ -590,7 +583,7 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
     visitOrExprNode: function(or) {
         or.lhs.accept(this);
         var lhs = this.resultStack.pop();
-        if (this.context.boolean(lhs))
+        if (this.context.boolean(lhs).value)
             this.resultStack.push(lhs);
         else
             or.rhs.accept(this);    // Keep the result on the stack
@@ -604,7 +597,7 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
     visitAndExprNode: function(and) {
         and.lhs.accept(this);
         var lhs = this.resultStack.pop();
-        if (!this.context.boolean(lhs))
+        if (!this.context.boolean(lhs).value)
             this.resultStack.push(lhs);
         else
             and.rhs.accept(this);   // Keep the result on the stack

@@ -14,68 +14,106 @@
 (function() {
 
 var xpath = window.xpath = window.xpath || {};
+xpath.core = xpath.core || {};
 
-function NOT_IMPLEMENTED() {
-    throw new Error("Unsuppored function.");
-}
+/**
+ * xpath.core.types has the 4 basic types in XPath 1.
+ */
+var t = xpath.core.types = {
+        NUMBER: xpath.Type("number"),
+        STRING: xpath.Type("string"),
+        BOOLEAN: xpath.Type("boolean"),
+        NODE_SET: xpath.Type("node-set")
+    };
 
-xpath.type = {
-    ANY_TYPE: 0,
-    NUMBER_TYPE: 1,
-    STRING_TYPE: 2,
-    BOOLEAN_TYPE: 3,
-    UNORDERED_NODE_ITERATOR_TYPE: 4,
-    ORDERED_NODE_ITERATOR_TYPE: 5,
-    UNORDERED_NODE_SNAPSHOT_TYPE: 6,
-    ORDERED_NODE_SNAPSHOT_TYPE: 7,
-    ANY_UNORDERED_NODE_TYPE: 8,
-    FIRST_ORDERED_NODE_TYPE: 9
-};
+/**
+ * Some constructor functions for core types...
+ */
+xpath.core.newNumber = function(n) { return xpath.Value(t.NUMBER, n) };
+xpath.core.newString = function(n) { return xpath.Value(t.STRING, n) };
+xpath.core.newBoolean = function(n) { return xpath.Value(t.BOOLEAN, n) };
+xpath.core.newNodeSet = function(n) { return xpath.Value(t.NODE_SET, n) };
 
-xpath.core = {
-    last: function() {
-        return this.last();
-    },
-    
-    position: function() {
-        return this.position();
-    },
-    
-    count: function(nodeSet) {
-        return nodeSet.length;
-    },
-    
-    id: function(idString) {
-        /// @todo FIXME: Not at all correct
-        ids = idString.split(" ");
-        var nodes = [];
-        for (var i = 0; i < ids; i++)
-            nodes.append(this.document.getElementById(ids[i]));
-        return nodes;
-    },
-    
-    'local-name': NOT_IMPLEMENTED,
-    'namespace-uri': NOT_IMPLEMENTED,
-    'name': NOT_IMPLEMENTED,
-    'string': NOT_IMPLEMENTED,
-    concat: NOT_IMPLEMENTED,
-    'starts-with': NOT_IMPLEMENTED,
-    contains: NOT_IMPLEMENTED,
-    'substring-before': NOT_IMPLEMENTED,
-    'substring-after': NOT_IMPLEMENTED,
-    substring: NOT_IMPLEMENTED,
-    'string-length': NOT_IMPLEMENTED,
-    'normalize-space': NOT_IMPLEMENTED,
-    translate: NOT_IMPLEMENTED,
-    'boolean': NOT_IMPLEMENTED,
-    not: function(val) { return !val; },
-    'true': function() { return true; },
-    'false': function() { return false; },
-    lang: NOT_IMPLEMENTED,
-    number: NOT_IMPLEMENTED,
-    sum: NOT_IMPLEMENTED,
-    floor: NOT_IMPLEMENTED,
-    ceiling: NOT_IMPLEMENTED,
-    round: NOT_IMPLEMENTED,
-};
+/**
+ * xpath.core.library defines the core XPath 1 Function Library.
+ */
+xpath.core.library = xpath.Library()
+    .define("last",     t.NUMBER, [], function() { return this.last() })
+    .define("position", t.NUMBER, [], function() { return this.position() })
+    .define("count",    t.NUMBER, [ t.NODE_SET ], function(nodeSet) { return nodeSet.length })
+    .define("id",       t.NODE_SET,    [ t.STRING ], function(idString) {
+            var ids = idString.split(xpath.lexer.re.whiteSpace),
+                nodes = [],
+                n;
+            for (var i = 0; i < ids.length; i++)
+                if (n = this.document.getElementById(ids[i]))
+                    nodes.push(n);
+            return nodes;
+        })
+    .define("id",       t.NODE_SET,    [ t.NODE_SET ], function(nodes) {
+            var ids = ""; // ??
+            return xpath.core.id.unwrap([ t.STRING ]).call(this, ids);
+        })
+    .define("local-name", t.STRING, [ t.NODE_SET ])
+    .define("local-name", t.STRING, [])
+    .define("namespace-uri", t.STRING, [ t.NODE_SET ])
+    .define("namespace-uri", t.STRING, [])
+    .define("name", t.STING, [ t.NODE_SET ])
+    .define("name", t.STING, [])
+    .define("string", t.STRING, [])
+    .define("string", t.STRING, [ t.NODE_SET ])
+    .define("string", t.STRING, [ t.STRING ])
+    .define("string", t.STRING, [ t.NUMBER ])
+    .define("string", t.STRING, [ t.BOOLEAN ])
+    .define("concat", t.STRING, [])                 /// @todo Implement varargs
+    .define("starts-with", t.BOOLEAN, [ t.STRING, t.STRING ], function(str, prefix) {
+            return str.indexOf(prefix) == 0;
+        })
+    .define("contains", t.BOOLEAN, [ t.STRING, t.STRING ], function(haystack, needle) {
+            return haystack.indexOf(needle) >= 0;
+        })
+    .define("substring-before", t.STRING, [ t.STRING, t.STRING ], function(haystack, needle) {
+            return haystack.substring(0, haystack.indexOf(needle));
+        })
+    .define("substring-after", t.STRING, [ t.STRING, t.STRING ], function(haystack, needle) {
+            return haystack.substring(haystack.indexOf(needle) + needle.length);
+        })
+    .define("substring", t.STRING, [ t.STRING, t.STRING, t.STRING ], function(str, start, length) {
+            return str.substring(start - 1, length);
+        })
+    .define("substring", t.STRING, [ t.STRING, t.STRING ], function(str, start) {
+            return str.substring(start - 1);
+        })
+    .define("string-length", t.NUMBER, [])
+    .define("string-length", t.NUMBER, [ t.STRING ], function(str) {
+            return str.length;
+        })
+    .define("normalize-space", t.STRING, [])
+    .define("normalize-space", t.STRING, [ t.STRING ])
+    .define("translate", t.STRING, [ t.STRING, t.STRING, t.STRING ])
+    .define("boolean", t.BOOLEAN, [ t.NUMBER ], function(n) { return n != 0 || isNaN(n) })
+    .define("boolean", t.BOOLEAN, [ t.STRING ], function(str) { return str.length != 0 })
+    .define("boolean", t.BOOLEAN, [ t.BOOLEAN ], function(val) { return val })
+    .define("boolean", t.BOOLEAN, [ t.NODE_SET ], function(nodes) { return nodes.length != 0 })
+    .define("not", t.BOOLEAN, [ t.BOOLEAN ], function(val) { return !val })
+    .define("true", t.BOOLEAN, [], function() { return true })
+    .define("false", t.BOOLEAN, [], function() { return false })
+    .define("lang", t.BOOLEAN, [ t.STRING ])
+    .define("number", t.NUMBER, [ t.NUMBER ], function(n) { return n })
+    .define("number", t.NUMBER, [ t.BOOLEAN ], function(bVal) { return bVal ? 1 : 0 })
+    .define("number", t.NUMBER, [ t.STRING ], function(str) { return parseFloat(str) })
+    .define("number", t.NUMBER, [])
+    .define("number", t.NUMBER, [ t.NODE_SET ])
+    .define("sum", t.NUMBER, [ t.NODE_SET ], function(nodes) {
+            var toNumber = xpath.core.number.unwrap([ t.NODE_SET ]),
+                sum = 0;
+            for (var i = 0, len = nodes.length; i < len; i++) {
+                sum += toNumber(nodes[i]);
+            }
+            return sum;
+        })
+    .define("floor", t.NUMBER, [ t.NUMBER ], function(n) { return Math.floor(n) })
+    .define("ceiling", t.NUMBER, [ t.NUMBER ], function(n) { return Math.ceil(n) })
+    .define("round", t.NUMBER, [ t.NUMBER ], function(n) { return Math.round(n) })
+    ;
 })();
