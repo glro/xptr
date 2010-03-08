@@ -412,7 +412,7 @@ var Lexer = xpath.lexer.Lexer = Class({
                 // Not-Equals (states 14 & 15)
                 case 14:
                     if (ch == '=') {
-                        state = 13;
+                        state = 15;
                     } else {
                         // throw an exception: Expected '=' after '!'
                     }
