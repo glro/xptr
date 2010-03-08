@@ -146,7 +146,7 @@ xpath.core.library = xpath.Library()
     .define("equals", t.BOOLEAN, [ t.NUMBER, t.NUMBER ], function(a, b) { return a == b; })
     .define("equals", t.BOOLEAN, [ t.STRING, t.STRING ], function(a, b) { return a == b; })
     .define("equals", t.BOOLEAN, [ t.NODE_SET, t.NODE_SET ], function(a, b) {
-            var haystack = sortStringValues(a);
+            var haystack = sortStringValues(this, a);
             return !eachAsString(this, b, function() {
                     if (haystack[binarySearch(haystack, this)] == this)
                         return false;
@@ -176,7 +176,7 @@ xpath.core.library = xpath.Library()
             return !this.call("equals", a, b).value;
         })
     .define("not-equals", t.BOOLEAN, [ t.NODE_SET, t.NODE_SET ], function(a, b) {
-            var haystack = sortStringValues(a);
+            var haystack = sortStringValues(this, a);
             return !eachAsString(this, b, function() {
                     if (haystack[binarySearch(haystack, this)] != this)
                         return false;
@@ -204,14 +204,14 @@ xpath.core.library = xpath.Library()
             return !this.call("less-than", a, b).value;
         })
     .define("less-than", t.BOOLEAN, [ t.NODE_SET, t.NODE_SET ], function(a, b) {
-            var haystack = sortStringValues(b);
+            var haystack = sortStringValues(this, b);
             return !eachAsString(this, a, function() {
                     if (binarySearch(haystack, this) < haystack.length)
                         return false;
                 });
         })
     .define("less-than-or-equal", t.BOOLEAN, [ t.NODE_SET, t.NODE_SET ], function(a, b) {
-            var haystack = sortStringValues(b);
+            var haystack = sortStringValues(this, b);
             return !eachAsString(this, a, function() {
                     var insertIndex = binarySearch(haystack, this);
                     if (insertIndex < haystack.length || haystack[insertIndex] == this)
@@ -219,14 +219,14 @@ xpath.core.library = xpath.Library()
                 });
         })
     .define("greater-than", t.BOOLEAN, [ t.NODE_SET, t.NODE_SET ], function(a, b) {
-            var haystack = sortStringValues(b);
+            var haystack = sortStringValues(this, b);
             return !eachAsString(this, a, function() {
                     if (binarySearch(haystack, this) > 0)
                         return false;
                 });
         })
     .define("greater-than-or-equal", t.BOOLEAN, [ t.NODE_SET, t.NODE_SET ], function(a, b) {
-            var haystack = sortStringValues(b);
+            var haystack = sortStringValues(this, b);
             return !eachAsString(this, a, function() {
                     var insertIndex = binarySearch(haystack, this);
                     if (insertIndex > 0 || haystack[insertIndex] == this)
@@ -268,7 +268,7 @@ function eachAsString(context, vals, cb) {
 
 function sortStringValues(context, nodes) {
     var vals = []
-    each(a, function() { vals.push(context.call("string", xpath.core.newNodeSet([this])).value); });
+    each(nodes, function() { vals.push(context.call("string", xpath.core.newNodeSet([this])).value); });
     vals.sort();
     return vals;
 }

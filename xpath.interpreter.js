@@ -399,7 +399,7 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
             /// @todo Throw proper error
             throw new Error("Invalid axis: '" + step.axis + "'");
 
-        context.contextIterator(function(n) {        
+        context.contextIterator(function(n) {
                 // Save the context
                 context.pushContext();
             
@@ -489,7 +489,8 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         if (nodeTest.args) {
             nodeTest.args.accept(this);
             var numArgs = nodeTest.args.args.length;
-            args = this.resultStack.splice(-numArgs);   // Pop off numArgs items
+            if (numArgs)
+                args = this.resultStack.splice(-numArgs);   // Pop off numArgs items
         }
         var nodeTypeCheck = this.context.getNodeTypeTest(nodeTest.type, args);
         if (nodeTest.type && !nodeTypeCheck) {
