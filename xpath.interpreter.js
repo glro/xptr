@@ -650,15 +650,35 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         gte.rhs.accept(this);
         this.resultStack.push(this.context.call("greater-than-or-equal", this.resultStack.splice(-2)));
     },
-    visitAddExprNode: nop,
-    visitSubExprNode: nop,
-    visitMulExprNode: nop,
-    visitDivExprNode: nop,
-    visitModExprNode: nop,
+    visitAddExprNode: function(add) {
+        add.lhs.accept(this);
+        add.rhs.accept(this);
+        this.resultStack.push(this.context.call("add", this.resultStack.splice(-2)));
+    },
+    visitSubExprNode: function(sub) {
+        sub.lhs.accept(this);
+        sub.rhs.accept(this);
+        this.resultStack.push(this.context.call("subtract", this.resultStack.splice(-2)));
+    },
+    visitMulExprNode: function(mul) {
+        mul.lhs.accept(this);
+        mul.rhs.accept(this);
+        this.resultStack.push(this.context.call("multiply", this.resultStack.splice(-2)));
+    },
+    visitDivExprNode: function(div) {
+        div.lhs.accept(this);
+        div.rhs.accept(this);
+        this.resultStack.push(this.context.call("divide", this.resultStack.splice(-2)));
+    },
+    visitModExprNode: function(mod) {
+        mod.lhs.accept(this);
+        mod.rhs.accept(this);
+        this.resultStack.push(this.context.call("modulus", this.resultStack.splice(-2)));
+    },
     visitNegExprNode: function(neg) {
         neg.expr.accept(this);
         var result = this.resultStack.pop();
-        this.resultStack.push(xpath.core.newNumber(-result.value));
+        this.resultStack.push(this.context.call("negate", this.resultStack.pop()));
     }
 });
 

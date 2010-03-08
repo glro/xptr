@@ -257,6 +257,31 @@ xpath.core.library = xpath.Library()
     .define("greater-than-or-equal", t.BOOLEAN, [ xpath.ANY_TYPE, t.NODE_SET ], function(val, nodes) {
             return testEquality(this, "greater-than-or-equal", nodes, val, true);
         })
+    
+    /* Arithmetic operations. */
+    .define("negate", t.NUMBER, [ t.NUMBER ], function(n) { return -n })
+    .define("add", t.NUMBER, [ t.NUMBER, t.NUMBER ], function(n, m) { return n + m })
+    .define("subtract", t.NUMBER, [ t.NUMBER, t.NUMBER ], function(n, m) { return n - m })
+    .define("multiply", t.NUMBER, [ t.NUMBER, t.NUMBER ], function(n, m) { return n * m })
+    .define("divide", t.NUMBER, [ t.NUMBER, t.NUMBER ], function(n, m) { return n / m })
+    .define("modulus", t.NUMBER, [ t.NUMBER, t.NUMBER ], function(n, m) { return n % m })
+    
+    .define("negate", t.NUMBER, [ t.ANY_TYPE ], function(n) { return this.call("negate", this.call("number", n)).value })
+    .define("add", t.NUMBER, [ t.ANY_TYPE, t.ANY_TYPE ], function(n, m) { 
+            return this.call("add", this.call("number", n), this.call("number", m)).value;
+        })
+    .define("subtract", t.NUMBER, [ t.ANY_TYPE, t.ANY_TYPE ], function(n, m) { 
+            return this.call("subtract", this.call("number", n), this.call("number", m)).value;
+        })
+    .define("multiply", t.NUMBER, [ t.ANY_TYPE, t.ANY_TYPE ], function(n, m) { 
+            return this.call("multiply", this.call("number", n), this.call("number", m)).value;
+        })
+    .define("divide", t.NUMBER, [ t.ANY_TYPE, t.ANY_TYPE ], function(n, m) { 
+            return this.call("divide", this.call("number", n), this.call("number", m)).value;
+        })
+    .define("modulus", t.NUMBER, [ t.ANY_TYPE, t.ANY_TYPE ], function(n, m) { 
+            return this.call("modulus", this.call("number", n), this.call("number", m)).value;
+        })
     ;
 
 function eachAsString(context, vals, cb) {

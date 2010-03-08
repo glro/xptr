@@ -380,31 +380,31 @@ ast.GteExprNode = Class(ast.BoolExpr, {
  ******************************************************************************/
 
 
-ast.AddExprNode = Class(ast.BinaryOpExpr, {
+ast.AddExprNode = Class(ast.BinaryOpNode, {
     accept: function(visitor) {
         return visitor.visitAddExprNode(this);
     }
 });
 
-ast.SubExprNode = Class(ast.BinaryOpExpr, {
+ast.SubExprNode = Class(ast.BinaryOpNode, {
     accept: function(visitor) {
         return visitor.visitSubExprNode(this);
     }
 });
 
-ast.MulExprNode = Class(ast.BinaryOpExpr, {
+ast.MulExprNode = Class(ast.BinaryOpNode, {
     accept: function(visitor) {
         return visitor.visitMulExprNode(this);
     }
 });
 
-ast.DivExprNode = Class(ast.BinaryOpExpr, {
+ast.DivExprNode = Class(ast.BinaryOpNode, {
     accept: function(visitor) {
         return visitor.visitDivExprNode(this);
     }
 });
 
-ast.ModExprNode = Class(ast.BinaryOpExpr, {
+ast.ModExprNode = Class(ast.BinaryOpNode, {
     accept: function(visitor) {
         return visitor.visitModExprNode(this);
     }

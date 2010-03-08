@@ -361,7 +361,7 @@ g.symbol( sym.MultiplicativeExpr )
                   
                   return root;
               });
-    
+
 g.symbol( sym.MultiplicativeExprTail )
     .produces([ sym.OP_ARI_MUL, sym.UnaryExpr, sym.MultiplicativeExprTail ],
               function(vals) {
