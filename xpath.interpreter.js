@@ -629,16 +629,36 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         neq.rhs.accept(this);
         this.resultStack.push(this.context.call("not-equals", this.resultStack.splice(-2)));
     },
-    visitLtExprNode: nop,
-    visitGtExprNode: nop,
-    visitLteExprNode: nop,
-    visitGteExprNode: nop,
+    visitLtExprNode: function(lt) {
+        lt.lhs.accept(this);
+        lt.rhs.accept(this);
+        this.resultStack.push(this.context.call("less-than", this.resultStack.splice(-2)));
+    },
+    visitGtExprNode: function(gt) {
+        gt.lhs.accept(this);
+        gt.rhs.accept(this);
+        this.resultStack.push(this.context.call("greater-than", this.resultStack.splice(-2)));
+    },
+    visitLteExprNode: function(lte) {
+        lte.lhs.accept(this);
+        lte.rhs.accept(this);
+        this.resultStack.push(this.context.call("less-than-or-equal", this.resultStack.splice(-2)));
+    },
+    visitGteExprNode: function(gte) {
+        gte.lhs.accept(this);
+        gte.rhs.accept(this);
+        this.resultStack.push(this.context.call("greater-than-or-equal", this.resultStack.splice(-2)));
+    },
     visitAddExprNode: nop,
     visitSubExprNode: nop,
     visitMulExprNode: nop,
     visitDivExprNode: nop,
     visitModExprNode: nop,
-    visitNegExprNode: nop
+    visitNegExprNode: function(neg) {
+        neg.expr.accept(this);
+        var result = this.resultStack.pop();
+        this.resultStack.push(xpath.core.newNumber(-result.value));
+    }
 });
 
 

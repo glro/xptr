@@ -146,28 +146,17 @@ xpath.core.library = xpath.Library()
     .define("equals", t.BOOLEAN, [ t.NUMBER, t.NUMBER ], function(a, b) { return a == b; })
     .define("equals", t.BOOLEAN, [ t.STRING, t.STRING ], function(a, b) { return a == b; })
     .define("equals", t.BOOLEAN, [ t.NODE_SET, t.NODE_SET ], function(a, b) {
-            var haystack = [],
-                context = this;
-            each(a, function() {
-                    haystack.push(context.call("string", xpath.core.newNodeSet([this])).value);
-                });
-            haystack.sort();
-            return !each(b, function() {
-                    var asStr = context.call("string", xpath.core.newNodeSet([this])).value;
-                    if (haystack[binarySearch(haystack, asStr)] == asStr)
+            var haystack = sortStringValues(a);
+            return !eachAsString(this, b, function() {
+                    if (haystack[binarySearch(haystack, this)] == this)
                         return false;
                 });
         })
     .define("equals", t.BOOLEAN, [ t.NODE_SET, xpath.ANY_TYPE ], function(nodes, val) {
-            var typeName = val.type.getTypeName(),
-                context = this;
-            return !each(nodes, function() {
-                    if (context.call("equals", context.call(typeName, xpath.core.newNodeSet([this])), val).value)
-                        return false;
-                });
+            return testEquality(this, "equals", nodes, val);
         })
     .define("equals", t.BOOLEAN, [ xpath.ANY_TYPE, t.NODE_SET ], function(val, nodes) {
-            return this.call("equals", xpath.core.newNodeSet(nodes), val);
+            return testEquality(this, "equals", nodes, val);
         })
     .define("equals", t.BOOLEAN, [ xpath.ANY_TYPE, xpath.ANY_TYPE ], function(a, b) {
             if (a.type == t.BOOLEAN || b.type == t.BOOLEAN) {
@@ -180,5 +169,116 @@ xpath.core.library = xpath.Library()
                 throw new Error("Cannot compare types '" + a.type + "' and '" + b.type + "'");
             }
         })
+    
+    /* For most types, "not-equals" is simply !"equals". This is not true for node-sets. */
+    
+    .define("not-equals", t.BOOLEAN, [ xpath.ANY_TYPE, xpath.ANY_TYPE ], function(a, b) {
+            return !this.call("equals", a, b).value;
+        })
+    .define("not-equals", t.BOOLEAN, [ t.NODE_SET, t.NODE_SET ], function(a, b) {
+            var haystack = sortStringValues(a);
+            return !eachAsString(this, b, function() {
+                    if (haystack[binarySearch(haystack, this)] != this)
+                        return false;
+                });
+        })
+    .define("not-equals", t.BOOLEAN, [ t.NODE_SET, xpath.ANY_TYPE ], function(nodes, val) {
+            return testEquality(this, "not-equals", nodes, val);
+        })
+    .define("not-equals", t.BOOLEAN, [ xpath.ANY_TYPE, t.NODE_SET ], function(val, nodes) {
+            return testEquality(this, "not-equals", nodes, val);
+        })
+    
+    /* The default action is to convert both types to numbers and perform the comparison. */
+    
+    .define("less-than", t.BOOLEAN, [ xpath.ANY_TYPE, xpath.ANY_TYPE ], function(a, b) {
+            return this.call("number", a).value < this.call("number", b).value;
+        })
+    .define("greater-than", t.BOOLEAN, [ xpath.ANY_TYPE, xpath.ANY_TYPE ], function(a, b) {
+            return this.call("less-than", b, a).value;
+        })
+    .define("less-than-or-equal", t.BOOLEAN, [ xpath.ANY_TYPE, xpath.ANY_TYPE ], function(a, b) {
+            return !this.call("greater-than", a, b).value;
+        })
+    .define("greater-than-or-equal", t.BOOLEAN, [ xpath.ANY_TYPE, xpath.ANY_TYPE ], function(a, b) {
+            return !this.call("less-than", a, b).value;
+        })
+    .define("less-than", t.BOOLEAN, [ t.NODE_SET, t.NODE_SET ], function(a, b) {
+            var haystack = sortStringValues(b);
+            return !eachAsString(this, a, function() {
+                    if (binarySearch(haystack, this) < haystack.length)
+                        return false;
+                });
+        })
+    .define("less-than-or-equal", t.BOOLEAN, [ t.NODE_SET, t.NODE_SET ], function(a, b) {
+            var haystack = sortStringValues(b);
+            return !eachAsString(this, a, function() {
+                    var insertIndex = binarySearch(haystack, this);
+                    if (insertIndex < haystack.length || haystack[insertIndex] == this)
+                        return false;
+                });
+        })
+    .define("greater-than", t.BOOLEAN, [ t.NODE_SET, t.NODE_SET ], function(a, b) {
+            var haystack = sortStringValues(b);
+            return !eachAsString(this, a, function() {
+                    if (binarySearch(haystack, this) > 0)
+                        return false;
+                });
+        })
+    .define("greater-than-or-equal", t.BOOLEAN, [ t.NODE_SET, t.NODE_SET ], function(a, b) {
+            var haystack = sortStringValues(b);
+            return !eachAsString(this, a, function() {
+                    var insertIndex = binarySearch(haystack, this);
+                    if (insertIndex > 0 || haystack[insertIndex] == this)
+                        return false;
+                });
+        })
+    .define("less-than", t.BOOLEAN, [ t.NODE_SET, xpath.ANY_TYPE ], function(nodes, val) {
+            return testEquality(this, "less-than", nodes, val);
+        })
+    .define("less-than", t.BOOLEAN, [ xpath.ANY_TYPE, t.NODE_SET ], function(val, nodes) {
+            return testEquality(this, "less-than", nodes, val, true);
+        })
+    .define("greater-than", t.BOOLEAN, [ t.NODE_SET, xpath.ANY_TYPE ], function(nodes, val) {
+            return testEquality(this, "greater-than", nodes, val);
+        })
+    .define("greater-than", t.BOOLEAN, [ xpath.ANY_TYPE, t.NODE_SET ], function(val, nodes) {
+            return testEquality(this, "greater-than", nodes, val, true);
+        })
+    .define("less-than-or-equal", t.BOOLEAN, [ t.NODE_SET, xpath.ANY_TYPE ], function(nodes, val) {
+            return testEquality(this, "less-than-or-equal", nodes, val);
+        })
+    .define("less-than-or-equal", t.BOOLEAN, [ xpath.ANY_TYPE, t.NODE_SET ], function(val, nodes) {
+            return testEquality(this, "less-than-or-equal", nodes, val, true);
+        })
+    .define("greater-than-or-equal", t.BOOLEAN, [ t.NODE_SET, xpath.ANY_TYPE ], function(nodes, val) {
+            return testEquality(this, "greater-than-or-equal", nodes, val);
+        })
+    .define("greater-than-or-equal", t.BOOLEAN, [ xpath.ANY_TYPE, t.NODE_SET ], function(val, nodes) {
+            return testEquality(this, "greater-than-or-equal", nodes, val, true);
+        })
     ;
+
+function eachAsString(context, vals, cb) {
+    return each(vals, function(i) {
+            var str = context.getStringValue(this);
+            return cb.call(str, i);
+        });
+}
+
+function sortStringValues(context, nodes) {
+    var vals = []
+    each(a, function() { vals.push(context.call("string", xpath.core.newNodeSet([this])).value); });
+    vals.sort();
+    return vals;
+}
+
+function testEquality(context, equality, nodes, val, reverse) {
+    var typeName = val.type.getTypeName();
+    return !each(nodes, function() {
+            if (!reverse && context.call(equality, context.call(typeName, xpath.core.newNodeSet([this])), val).value
+                || reverse && context.call(equality, val, context.call(typeName, xpath.core.newNodeSet([this]))).value)
+                return false;
+        });
+}
 })();

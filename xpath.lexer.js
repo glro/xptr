@@ -425,7 +425,7 @@ var Lexer = xpath.lexer.Lexer = Class({
                 // < & <= operators: states 16 & 17
                 case 16:
                     if (ch == '=') {
-                        state = 16;
+                        state = 17;
                         
                     } else {
                         emitToken(sym.OP_REL_LT);
