@@ -19,7 +19,7 @@
 <script type="text/javascript">
 $(function() {
     $("#xpath-run").click(function() {
-        var nodes = xpath.eval($("#xpath-expr").val());
+        var nodes = xpath($("#xpath-expr").val());
         var out = $("#output");
         out.empty();
         out.append("<h2>Found " + nodes.length + " Nodes</h2>");
