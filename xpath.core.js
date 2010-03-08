@@ -79,7 +79,7 @@ xpath.core.library = xpath.Library()
             return u + v;
         })
     .defineBare("concat", function() {
-            var bigStr = arguments.shift(),
+            var bigStr = Array.prototype.shift.call(arguments),
                 context = this;
             each(arguments, function() {
                     bigStr = context.call("_concat", bigStr, this);

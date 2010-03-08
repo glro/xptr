@@ -160,8 +160,7 @@ xpath.define = function(id, returnType, argumentTypes, jsFunc, wrapper, mappings
     };
     wrapper.unwrap = function(argumentTypes) {
         argumentTypes = argumentTypes || [];
-        var f = mappings[signature(argumentTypes)],
-            i = 1;
+        var f = mappings[signature(argumentTypes)];
         if (typeof f == "undefined")
             throw new Error("Cannot find function '" + id + "' with signature " + signature(argumentTypes));
         return mappings[signature(argumentTypes || [])].fn;
