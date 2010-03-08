@@ -32,7 +32,12 @@ var t = xpath.core.types = {
 xpath.core.newNumber = function(n) { return xpath.Value(t.NUMBER, n) };
 xpath.core.newString = function(n) { return xpath.Value(t.STRING, n) };
 xpath.core.newBoolean = function(n) { return xpath.Value(t.BOOLEAN, n) };
-xpath.core.newNodeSet = function(n) { return xpath.Value(t.NODE_SET, n) };
+xpath.core.newNodeSet = function(n) {
+    return xpath.Value(t.NODE_SET, typeof n.length == "number" ? n : [n])
+};
+
+var each         = xpath.util.each,
+    binarySearch = xpath.util.binarySearch;
 
 /**
  * xpath.core.library defines the core XPath 1 Function Library.
@@ -60,12 +65,27 @@ xpath.core.library = xpath.Library()
     .define("namespace-uri", t.STRING, [])
     .define("name", t.STING, [ t.NODE_SET ])
     .define("name", t.STING, [])
-    .define("string", t.STRING, [])
-    .define("string", t.STRING, [ t.NODE_SET ])
-    .define("string", t.STRING, [ t.STRING ])
-    .define("string", t.STRING, [ t.NUMBER ])
-    .define("string", t.STRING, [ t.BOOLEAN ])
-    .define("concat", t.STRING, [])                 /// @todo Implement varargs
+    .define("string", t.STRING, [], function() {
+            return this.getStringValue(this.dot());
+        })
+    .define("string", t.STRING, [ t.NODE_SET ], function(nodes) {
+            /// @todo Return string-value of node that is FIRST in doc. order
+            return this.getStringValue(nodes[0]);
+        })
+    .define("string", t.STRING, [ t.STRING ], function(s) { return s })
+    .define("string", t.STRING, [ t.NUMBER ], function(n) { return n.toString() })
+    .define("string", t.STRING, [ t.BOOLEAN ], function(b) { return b.toString() })
+    .define("_concat", t.STRING, [ t.STRING, t.STRING ], function(u, v) {
+            return u + v;
+        })
+    .defineBare("concat", function() {
+            var bigStr = arguments.shift(),
+                context = this;
+            each(arguments, function() {
+                    bigStr = context.call("_concat", bigStr, this);
+                });
+            return bigStr;
+        })
     .define("starts-with", t.BOOLEAN, [ t.STRING, t.STRING ], function(str, prefix) {
             return str.indexOf(prefix) == 0;
         })
@@ -78,13 +98,13 @@ xpath.core.library = xpath.Library()
     .define("substring-after", t.STRING, [ t.STRING, t.STRING ], function(haystack, needle) {
             return haystack.substring(haystack.indexOf(needle) + needle.length);
         })
-    .define("substring", t.STRING, [ t.STRING, t.STRING, t.STRING ], function(str, start, length) {
-            return str.substring(start - 1, length);
+    .define("substring", t.STRING, [ t.STRING, t.NUMBER, t.NUMBER ], function(str, start, length) {
+            return str.substring(start - 1, start - 1 + length);
         })
-    .define("substring", t.STRING, [ t.STRING, t.STRING ], function(str, start) {
+    .define("substring", t.STRING, [ t.STRING, t.NUMBER ], function(str, start) {
             return str.substring(start - 1);
         })
-    .define("string-length", t.NUMBER, [])
+    .define("string-length", t.NUMBER, [], function() { return this.call("string").value.length })
     .define("string-length", t.NUMBER, [ t.STRING ], function(str) {
             return str.length;
         })
@@ -102,18 +122,63 @@ xpath.core.library = xpath.Library()
     .define("number", t.NUMBER, [ t.NUMBER ], function(n) { return n })
     .define("number", t.NUMBER, [ t.BOOLEAN ], function(bVal) { return bVal ? 1 : 0 })
     .define("number", t.NUMBER, [ t.STRING ], function(str) { return parseFloat(str) })
-    .define("number", t.NUMBER, [])
-    .define("number", t.NUMBER, [ t.NODE_SET ])
+    .define("number", t.NUMBER, [ t.NODE_SET ], function(nodes) {
+            return this.call("number", this.call("string", xpath.core.newNodeSet(nodes))).value;
+        })
+    .define("number", t.NUMBER, [], function() {
+            return this.call("number", this.call("string")).value;
+        })
     .define("sum", t.NUMBER, [ t.NODE_SET ], function(nodes) {
             var toNumber = xpath.core.number.unwrap([ t.NODE_SET ]),
                 sum = 0;
-            for (var i = 0, len = nodes.length; i < len; i++) {
-                sum += toNumber(nodes[i]);
-            }
+            each(nodes, function() { sum += toNumber(this); });
             return sum;
         })
     .define("floor", t.NUMBER, [ t.NUMBER ], function(n) { return Math.floor(n) })
     .define("ceiling", t.NUMBER, [ t.NUMBER ], function(n) { return Math.ceil(n) })
     .define("round", t.NUMBER, [ t.NUMBER ], function(n) { return Math.round(n) })
+    
+    /* Functions NOT defined in the XPath 1 Spec. */
+    
+    /* "equals" functions are used in = and != comparisons. */
+    
+    .define("equals", t.BOOLEAN, [ t.BOOLEAN, t.BOOLEAN ], function(a, b) { return a == b; })
+    .define("equals", t.BOOLEAN, [ t.NUMBER, t.NUMBER ], function(a, b) { return a == b; })
+    .define("equals", t.BOOLEAN, [ t.STRING, t.STRING ], function(a, b) { return a == b; })
+    .define("equals", t.BOOLEAN, [ t.NODE_SET, t.NODE_SET ], function(a, b) {
+            var haystack = [],
+                context = this;
+            each(a, function() {
+                    haystack.push(context.call("string", xpath.core.newNodeSet([this])).value);
+                });
+            haystack.sort();
+            return !each(b, function() {
+                    var asStr = context.call("string", xpath.core.newNodeSet([this])).value;
+                    if (haystack[binarySearch(haystack, asStr)] == asStr)
+                        return false;
+                });
+        })
+    .define("equals", t.BOOLEAN, [ t.NODE_SET, xpath.ANY_TYPE ], function(nodes, val) {
+            var typeName = val.type.getTypeName(),
+                context = this;
+            return !each(nodes, function() {
+                    if (context.call("equals", context.call(typeName, xpath.core.newNodeSet([this])), val).value)
+                        return false;
+                });
+        })
+    .define("equals", t.BOOLEAN, [ xpath.ANY_TYPE, t.NODE_SET ], function(val, nodes) {
+            return this.call("equals", xpath.core.newNodeSet(nodes), val);
+        })
+    .define("equals", t.BOOLEAN, [ xpath.ANY_TYPE, xpath.ANY_TYPE ], function(a, b) {
+            if (a.type == t.BOOLEAN || b.type == t.BOOLEAN) {
+                return this.call("equals", this.call("boolean", a), this.call("boolean", b)).value;
+            } else if (a.type == t.NUMBER || b.type == t.NUMBER) {
+                return this.call("equals", this.call("number", a), this.call("number", b)).value;
+            } else if (a.type == t.STRING || b.type == t.STRING) {
+                return this.call("equals", this.call("string", a), this.call("string", b)).value;            
+            } else {
+                throw new Error("Cannot compare types '" + a.type + "' and '" + b.type + "'");
+            }
+        })
     ;
 })();

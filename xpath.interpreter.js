@@ -223,6 +223,8 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
         var func = this.functions.getFunction(funcName);
         if (typeof func == "undefined")
             throw new Error("The function '" + funcName + "' does not exist.");
+        if (typeof args.length != "number")
+            args = Array.prototype.slice.call(arguments, 1);
         return func.apply(this, args);
      },
      
@@ -317,6 +319,20 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
         }
         
         return { 'localName': localName, 'namespaceURI': namespaceUri };
+     },
+     
+     getStringValue: function(node) {
+        if (node.nodeType == node.ELEMENT_NODE || node.nodeType == node.DOCUMENT_NODE) {
+            var iter = this.getAxisGuide("descendant"),
+                text = [];
+            iter(node, function(n) {
+                    if (n.nodeType == n.TEXT_NODE)
+                        text.push(n.nodeValue)
+                })
+            return text.join("");
+        } else {
+            return node.nodeValue;
+        }
      }
 });
 
@@ -447,7 +463,7 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
                 
                 predicate.expr.accept(interpreter);
                 var result = interpreter.resultStack.pop();
-                if (result.type == core.NUMBER) {
+                if (result.type == core.types.NUMBER) {
                     /// @todo If number is constant, then STOP iteration
                     if (context.position() == result.value)
                         nodes.push(n);
@@ -603,7 +619,11 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
             and.rhs.accept(this);   // Keep the result on the stack
     },
     
-    visitEqExprNode: nop,
+    visitEqExprNode: function(eq) {
+        eq.lhs.accept(this);
+        eq.rhs.accept(this);
+        this.resultStack.push(this.context.call("equals", this.resultStack.splice(-2)));
+    },
     visitNeqExprNode: nop,
     visitLtExprNode: nop,
     visitGtExprNode: nop,

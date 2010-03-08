@@ -102,6 +102,13 @@ xpath.util = {
         return l;
     },
     
+    each: function(list, cb, data) {
+        for (var i = 0, len = list.length; i < len; i++)
+            if (cb.call(list[i], i, data) === false)
+                return false;
+        return true;
+    },
+    
     /**
      * A rather involved comparator that let's us compare nodes so they can
      * be sorted or stored in a tree.

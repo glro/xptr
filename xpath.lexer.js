@@ -362,7 +362,10 @@ var Lexer = xpath.lexer.Lexer = Class({
                     break;
                 
                 case 10:
-                    emitToken(sym.LITERAL, val.substring(1, val.length - 1));
+                    emitToken(sym.LITERAL, val.substring(
+                            val.indexOf(literalStartChar) + 1, 
+                            val.lastIndexOf(literalStartChar)
+                        ));
                     break;
                  
                 

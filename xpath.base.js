@@ -44,6 +44,9 @@ xpath.Type = function(name) {
         return type;
     };
 
+/** Special type representing any type. */
+xpath.ANY_TYPE = xpath.Type("*");
+
 /**
  * Construct a value with a given type. Here type is a Type as returned by
  * xpath.Type() and value is a some backing native JS value.
@@ -51,6 +54,7 @@ xpath.Type = function(name) {
 xpath.Value = function(type, value) {
         return {"type": type, "value": value};
     };
+
 
 /**
  * Used by xpath.define() when no Javascript function is given. This will,
@@ -86,10 +90,10 @@ function types(args) {
 /**
  * Returns an array of just the values from an array of Values.
  */
-function values(args) {
+function values(args, argTypes) {
     var vals = [];
     for (var i = 0; i < args.length; i++)
-        vals.push(args[i].value);
+        vals.push(argTypes && argTypes[i] == xpath.ANY_TYPE ? args[i] : args[i].value);
     return vals;
 }
 
@@ -107,7 +111,7 @@ xpath.Library = function(lib) {
             return lib;
         },
         defineBare: function(id, fn) {
-            if (lib[id] != "undefined")
+            if (typeof lib[id] != "undefined")
                 throw new Error("Bare XPath functions can only be defined once.");
             lib[id] = fn;
             return lib;
@@ -126,22 +130,29 @@ xpath.Library = function(lib) {
  * rather than the XPath type. The value returned by the Javascript function
  * will be wrapped according to the return type specified. The name given is
  * used purely for user error messages.
- *
- * If a function can have multiple signatures, then you can simply chain
- * declare() calls. For example:
- * xpath.declare(1, [], function() { return 1; })
- *      .declare(1, [1], function(a) { return a + 1; });
  */
 xpath.define = function(id, returnType, argumentTypes, jsFunc, wrapper, mappings) {
     jsFunc = jsFunc || NOT_IMPLEMENTED;
     mappings = mappings || {};
     wrapper = wrapper || function() {
             var argTypes = types(arguments),
-                sig = signature(argTypes);
-            var f = mappings[sig];
+                modArgTypes = argTypes.slice(),
+                f;
+
+            // Try to find a matching function
+            
+            for (var i = 0, stop = Math.pow(2, argTypes.length);
+                typeof f == "undefined" && i < stop;
+                i++)
+            {
+                for (var j = 0; j < modArgTypes.length; j++)
+                    modArgTypes[j] = ((j + 1) & i) == 0 ? argTypes[j] : xpath.ANY_TYPE;
+                f = mappings[signature(modArgTypes)];
+            }
+            
             if (typeof f == "undefined")
-                throw new Error("Cannot apply arguments (" + types(arguments).join(",") + ") to function '" + id + "'");
-            var value = f.fn.apply(this, values(arguments));
+                throw new Error("Cannot apply arguments (" + argTypes.join(",") + ") to function '" + id + "'");
+            var value = f.fn.apply(this, values(arguments, modArgTypes));
             return {"type": f.rt, "value": value};
         };
     wrapper.define = function(id, rt, at, jsf) {
@@ -149,7 +160,8 @@ xpath.define = function(id, returnType, argumentTypes, jsFunc, wrapper, mappings
     };
     wrapper.unwrap = function(argumentTypes) {
         argumentTypes = argumentTypes || [];
-        var f = mappings[signature(argumentTypes)];
+        var f = mappings[signature(argumentTypes)],
+            i = 1;
         if (typeof f == "undefined")
             throw new Error("Cannot find function '" + id + "' with signature " + signature(argumentTypes));
         return mappings[signature(argumentTypes || [])].fn;
