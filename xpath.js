@@ -21,7 +21,9 @@
 
 (function() {
 
-var xpath = window.xpath = window.xpath || {};
+var xpath = window.xpath = window.xpath || function() {
+    return xpath.evaluate.apply(this, arguments);
+};
 
 
 /**
@@ -59,7 +61,7 @@ xpath.compile = function(expression) {
  *
  * {@code xpath.compile(expression).eval(context, variables)}
  */
-xpath.eval = function(expression, context, variables) {
+xpath.evaluate = function(expression, context, variables) {
     return xpath.compile(expression).eval(context, variables);
 };
 
