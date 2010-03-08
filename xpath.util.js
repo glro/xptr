@@ -91,10 +91,10 @@ xpath.util = {
         l = l || 0;
         r = (!r || r <= l) ? list.length : r;
         while (l < r) {
-            c = (l + r) / 2;
+            c = Math.floor((l + r) / 2);
             if (list[c] == val)
                 return c;
-            if (cmp && cmp(list[c], val) < 0 || list[c] < 0)
+            if (cmp && cmp(list[c], val) < 0 || list[c] < val)
                 l = c + 1;
             else
                 r = c;
