@@ -624,7 +624,11 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         eq.rhs.accept(this);
         this.resultStack.push(this.context.call("equals", this.resultStack.splice(-2)));
     },
-    visitNeqExprNode: nop,
+    visitNeqExprNode: function(neq) {
+        neq.lhs.accept(this);
+        neq.rhs.accept(this);
+        this.resultStack.push(this.context.call("not-equals", this.resultStack.splice(-2)));
+    },
     visitLtExprNode: nop,
     visitGtExprNode: nop,
     visitLteExprNode: nop,
@@ -684,7 +688,7 @@ xpath.interpreter.AxisGuide = Class({
         return cb(n) !== false;
     },
     parent: function(n, cb) {
-        if (n.parentNode)
+        if (!n.parentNode)
             return true;
         return cb(n.parentNode) !== false;
     },
