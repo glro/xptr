@@ -112,22 +112,6 @@ xpath.util = {
     normalizeWhiteSpace: function(str) {
         return str.replace(/(^[\u0020\u0009\u000D\u000A]+|[\u0020\u0009\u000D\u000A]+$)/g, "")
                   .replace(/[\u0020\u0009\u000D\u000A]+/g, " ");
-    },
-    
-    /**
-     * A rather involved comparator that let's us compare nodes so they can
-     * be sorted or stored in a tree.
-     */
-    nodeComparator: function(n, m) {
-        if (n.nodeType != m.nodeType)
-            return n.nodeType < m.nodeType ? -1 : 1;
-        if (n.nodeName != m.nodeName)
-            return n.nodeName < m.nodeName ? -1 : 1;
-        if (n.nodeValue != m.nodeValue)
-            return n.nodeValue < m.nodeValue ? -1 : 1;
-        if (n.childNodes.length != m.childNodes.length)
-            return n.childNodes.length < m.childNodes.length ? -1 : 1;
-        return 0;
     }
 };
 

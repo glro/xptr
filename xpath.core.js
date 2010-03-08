@@ -26,6 +26,83 @@ var t = xpath.core.types = {
         NODE_SET: xpath.Type("node-set")
     };
 
+var compareNodes = xpath.core.compareNodes = function(a, b) {
+    if (a == b)
+        return 0;
+    return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+};
+
+
+/**
+ * A NodeSet provides a data structure that maintains nodes that has 2 nice
+ * guarentees:
+ *
+ * 1. The iterator, each(), will always iterate the nodes in document order.
+ * 2. All nodes in the list are unique (there are no duplicates).
+ */
+xpath.core.NodeSet = xpath.util.Class({
+    /**
+     * Construct a new NodeSet from an array of nodes. Construction requires
+     * O(n log n) time, where n = nodes.length.
+     */
+    init: function(nodes) {
+        nodes = nodes || [];
+        nodes.sort(xpath.core.compareNodes);
+        var uniqNodes = this.nodes = [];
+        xpath.util.each(function() {
+                if (uniqNodes[uniqNodes.length - 1] != this)
+                    uniqNodes.push(this);
+            });
+    },
+    
+    /**
+     * Iteratate over each node in the NodeSet in document order.
+     *
+     * @param cb The callback to notify each iteration with the current node.
+     */
+    each: function(cb) {
+        return xpath.util.each(this.nodes, cb);
+    },
+    
+    /**
+     * Returns the i-th node in this NodeSet.
+     */
+    item: function(i) {
+        return this.nodes[i];
+    },
+    
+    /**
+     * Return the number of nodes in this NodeSet.
+     */
+    size: function() {
+        return this.nodes.length;
+    },
+    
+    /**
+     * Returns a new NodeSet that is the union of this node set and nodeSet.
+     * The union of 2 NodeSets is performed in O(n) time (n = this.length 
+     * + nodeSet.length).
+     *
+     * @param nodeSet A node set to union this NodeSet with.
+     */
+    unionWith: function(nodeSet) {
+        var newNodes = [],
+            i = 0, len = this.nodes.length,
+            origNodes = this.nodes;
+        nodeSet.each(function() {
+            for (; i < len && compareNodes(this, origNodes[i]) > 0; i++)
+                newNodes.push(origNodes[i]);
+            if (this == origNodes[i])
+                i++;    // Skip this node
+            newNodes.push(this);
+        });
+        for (; i < len; i++)
+            newNodes.push(this.nodes[i]);
+        return new xpath.core.NodeSet(newNodes);
+    }
+});
+
+
 /**
  * Some constructor functions for core types...
  */
