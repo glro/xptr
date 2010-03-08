@@ -109,6 +109,11 @@ xpath.util = {
         return true;
     },
     
+    normalizeWhiteSpace: function(str) {
+        return str.replace(/(^[\u0020\u0009\u000D\u000A]+|[\u0020\u0009\u000D\u000A]+$)/g, "")
+                  .replace(/[\u0020\u0009\u000D\u000A]+/g, " ");
+    },
+    
     /**
      * A rather involved comparator that let's us compare nodes so they can
      * be sorted or stored in a tree.

@@ -56,8 +56,10 @@ xpath.core.library = xpath.Library()
             return nodes;
         })
     .define("id",       t.NODE_SET,    [ t.NODE_SET ], function(nodes) {
-            var ids = ""; // ??
-            return xpath.core.id.unwrap([ t.STRING ]).call(this, ids);
+            var context = this,
+                idstr = [];
+            each(nodes, function() { idstr.push(context.getStringValue(this)); })
+            return xpath.core.id.unwrap([ t.STRING ]).call(this, idstr.join(" "));
         })
     .define("local-name", t.STRING, [ t.NODE_SET ])
     .define("local-name", t.STRING, [])
@@ -108,9 +110,24 @@ xpath.core.library = xpath.Library()
     .define("string-length", t.NUMBER, [ t.STRING ], function(str) {
             return str.length;
         })
-    .define("normalize-space", t.STRING, [])
-    .define("normalize-space", t.STRING, [ t.STRING ])
-    .define("translate", t.STRING, [ t.STRING, t.STRING, t.STRING ])
+    .define("normalize-space", t.STRING, [], function() {
+            return this.call("normalize-space", xpath.core.newString(this.getStringValue(this.dot()))).value;
+        })
+    .define("normalize-space", t.STRING, [ t.STRING ], function(str) {
+            return xpath.util.normalizeWhiteSpace(str);
+        })
+    .define("translate", t.STRING, [ t.STRING, t.STRING, t.STRING ], function(source, from, to) {
+            var transMap = {}, translated = [];
+            for (var i = 0; i < from.length; i++)
+                transMap[from.charAt(i)] = to.charAt(i) ? to.charAt(i) : 1;
+            for (var i = 0; i < source.length; i++) {
+                var ch = source.charAt(i);
+                translated.push(transMap[ch] 
+                                    ? (transMap[ch] === 1 ? "" : transMap[ch])
+                                    : ch);
+            }
+            return translated.join("");
+        })
     .define("boolean", t.BOOLEAN, [ t.NUMBER ], function(n) { return n != 0 || isNaN(n) })
     .define("boolean", t.BOOLEAN, [ t.STRING ], function(str) { return str.length != 0 })
     .define("boolean", t.BOOLEAN, [ t.BOOLEAN ], function(val) { return val })
@@ -259,6 +276,7 @@ xpath.core.library = xpath.Library()
         })
     
     /* Arithmetic operations. */
+    
     .define("negate", t.NUMBER, [ t.NUMBER ], function(n) { return -n })
     .define("add", t.NUMBER, [ t.NUMBER, t.NUMBER ], function(n, m) { return n + m })
     .define("subtract", t.NUMBER, [ t.NUMBER, t.NUMBER ], function(n, m) { return n - m })
