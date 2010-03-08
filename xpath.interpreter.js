@@ -563,7 +563,7 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
      */
     visitFunctionCallNode: function(func) {
         func.args.accept(this);
-        var args = this.resultStack.splice(-func.args.args.length);
+        var args = func.args.args.length ? this.resultStack.splice(-func.args.args.length) : [];
         this.resultStack.push(this.context.call(func['name'], args));
     },
     
