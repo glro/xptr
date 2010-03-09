@@ -24,8 +24,6 @@ function isTextNode(n) { return n.nodeType == n.TEXT_NODE; }
 function isProcessingInstructionNode(n) { return n.nodeType == n.PROCESSING_INSTRUCTION_NODE; }
 function isAnyNode(n) { return true; }
 
-
-
 // Local reference to xpath.core
 var core = xpath.core;
 
@@ -143,13 +141,6 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
      */
     last: function() {
         return this.size;
-    },
-    
-    /**
-     * Converts obj to a boolean value according to XPath.
-     */
-    boolean: function(result) {
-        return this.call("boolean", [result]);
     },
     
     
@@ -332,6 +323,10 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         this.context = evalContext;
     },
     
+    toBoolean: function(result) {
+        return this.context.call("boolean", [result]).value;
+    },
+    
     interpret: function(root) {
         this.resultStack = [];
         
@@ -465,7 +460,7 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
                     
                 } else {
                     // Convert the result to a boolean value
-                    if (context.boolean(result).value)
+                    if (interpreter.toBoolean(result))
                         nodes.push(n);
                 }
             });
@@ -629,7 +624,7 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
     visitOrExprNode: function(or) {
         or.lhs.accept(this);
         var lhs = this.resultStack.pop();
-        if (this.context.boolean(lhs).value)
+        if (this.toBoolean(lhs))
             this.resultStack.push(lhs);
         else
             or.rhs.accept(this);    // Keep the result on the stack
@@ -643,7 +638,7 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
     visitAndExprNode: function(and) {
         and.lhs.accept(this);
         var lhs = this.resultStack.pop();
-        if (!this.context.boolean(lhs).value)
+        if (!this.toBoolean(lhs))
             this.resultStack.push(lhs);
         else
             and.rhs.accept(this);   // Keep the result on the stack
