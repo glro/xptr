@@ -390,9 +390,6 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         if (path.isAbsolute) {
             this.context.size = 1;
             this.context.iter = createArrayContextIterator(this.context, [this.context.document]);
-        } else {
-            this.context.size = 1;
-            this.context.iter = createArrayContextIterator(this.context, [this.context.item]);
         }
         
         for (var i = 0, numSteps = path.steps.length; i < numSteps; i++) {
@@ -597,8 +594,12 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
     visitPathExprNode: function(pathExpr) {
         this.context.pushContext();
         
-        if (pathExpr.filterExpr)
+        if (pathExpr.filterExpr) {
             pathExpr.filterExpr.accept(this);
+            var result = this.resultStack.pop();
+            this.context.size = result.value.size();
+            this.context.iter = createNodeSetContextIterator(this.context, result.value);
+        }
         if (pathExpr.path)
             pathExpr.path.accept(this);
         
@@ -611,7 +612,31 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         this.context.popContext();
     },
     
-    visitFilterExprNode: nop,
+    /* A filter node could be standalone expression, so its result must be
+     * pushed onto the stack. Since the result is on the stack, we also preserve
+     * the context state.
+     */
+    visitFilterExprNode: function(filter) {
+        this.context.pushContext();
+        
+        filter.expr.accept(this);
+        var result = this.resultStack.pop();
+        if (result.type != core.types.NODE_SET)
+            throw new Error("Predicates can be applied to type '" + result.type + "'");
+        var nodeset = result.value;
+        this.context.size = nodeset.size();
+        this.context.iter = createNodeSetContextIterator(this.context, nodeset);
+        console.log(this.context.size);
+        filter.predicates.accept(this);
+        
+        var result = [];
+        this.context.contextIterator(function(n) {
+                result.push(n);
+            });
+        this.resultStack.push(core.newNodeSet(result));
+        
+        this.context.popContext();
+    },
     
     visitUnionExprNode: function(_union) {
         _union.lhs.accept(this);

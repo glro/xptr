@@ -341,6 +341,7 @@ var Lexer = xpath.lexer.Lexer = Class({
                             && prevToken != sym.LEFT_PAREN 
                             && prevToken != sym.LEFT_BRACKET
                             && prevToken != sym.COMMA
+                            && prevToken != sym.AXIS_NAME
                             && !sym.isOperator(prevToken)) {
 
                         emitToken(sym.OP_ARI_MUL);
@@ -483,6 +484,7 @@ var Lexer = xpath.lexer.Lexer = Class({
                                 && prevToken != sym.LEFT_PAREN 
                                 && prevToken != sym.LEFT_BRACKET
                                 && prevToken != sym.COMMA
+                                && prevToken != sym.AXIS_NAME
                                 && !sym.isOperator(prevToken)
                                 && (opTok = xpath.symbol.operatorNameToToken(val))) {
                             emitToken(opTok);
@@ -556,6 +558,7 @@ var Lexer = xpath.lexer.Lexer = Class({
                                 && prevToken != sym.LEFT_PAREN 
                                 && prevToken != sym.LEFT_BRACKET
                                 && prevToken != sym.COMMA
+                                && prevToken != sym.AXIS_NAME
                                 && !sym.isOperator(prevToken)
                                 && (opTok = xpath.symbol.operatorNameToToken(val))) {
                                 
