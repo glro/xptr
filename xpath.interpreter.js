@@ -36,6 +36,17 @@ function createArrayContextIterator(context, nodes) {
         };
 }
 
+function createNodeSetContextIterator(context, nodeSet) {
+    return function(cb) {
+            var pos = 1;
+            return nodeSet.each(function() {
+                    context.pos = pos++;
+                    context.item = this;
+                    return cb(context.item, context.pos);
+                });
+        };
+}
+
 // Local reference to xpath.core
 var core = xpath.core;
 
@@ -353,7 +364,13 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         var result = this.resultStack.pop();
         if (typeof result == "undefined")
             return null;
-        return result.value;
+        if (result.type == core.types.NODE_SET) {
+            var nodes = [];
+            result.value.each(function() { nodes.push(this) });
+            return nodes;
+        } else {
+            return result.value;
+        }
     },
     
     /* An XPathExprNode is just a top level node for an expression, but has no
@@ -432,8 +449,11 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
                 // Restore the context
                 context.popContext();
             });
-        this.context.size = result.length;
-        this.context.iter = createArrayContextIterator(context, result);
+
+        // This will force the result into document order and remove duplicates
+        var nodeset = new core.NodeSet(result);
+        this.context.size = nodeset.size();
+        this.context.iter = createNodeSetContextIterator(context, nodeset);
     },
     
     /* Predicate lists are an in-order list of all the predicates. We simply
@@ -592,7 +612,12 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
     },
     
     visitFilterExprNode: nop,
-    visitUnionExprNode: nop,
+    
+    visitUnionExprNode: function(_union) {
+        _union.lhs.accept(this);
+        _union.rhs.accept(this);
+        this.resultStack.push(this.context.call("union", this.resultStack.splice(-2)));
+    },
     
     /* An "or" expression first evaluates the LHS. If it evaluates to true, then
      * the value of the LHS is pushed onto the result stack and the RHS is not

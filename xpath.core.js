@@ -40,7 +40,7 @@ var compareNodes = xpath.core.compareNodes = function(a, b) {
  * 1. The iterator, each(), will always iterate the nodes in document order.
  * 2. All nodes in the list are unique (there are no duplicates).
  */
-xpath.core.NodeSet = xpath.util.Class({
+var NodeSet = xpath.core.NodeSet = xpath.util.Class({
     /**
      * Construct a new NodeSet from an array of nodes. Construction requires
      * O(n log n) time, where n = nodes.length.
@@ -49,7 +49,7 @@ xpath.core.NodeSet = xpath.util.Class({
         nodes = nodes || [];
         nodes.sort(xpath.core.compareNodes);
         var uniqNodes = this.nodes = [];
-        xpath.util.each(function() {
+        xpath.util.each(nodes, function() {
                 if (uniqNodes[uniqNodes.length - 1] != this)
                     uniqNodes.push(this);
             });
@@ -65,9 +65,20 @@ xpath.core.NodeSet = xpath.util.Class({
     },
     
     /**
+     * Returns an iterator that can be used to iterate over all nodes in this
+     * node set.
+     */
+    iterator: function() {
+        var nodeset = this;
+        return function(cb) {
+                return nodeset.each(cb);
+            };
+    },
+    
+    /**
      * Returns the i-th node in this NodeSet.
      */
-    item: function(i) {
+    get: function(i) {
         return this.nodes[i];
     },
     
@@ -110,7 +121,7 @@ xpath.core.newNumber = function(n) { return xpath.Value(t.NUMBER, n) };
 xpath.core.newString = function(n) { return xpath.Value(t.STRING, n) };
 xpath.core.newBoolean = function(n) { return xpath.Value(t.BOOLEAN, n) };
 xpath.core.newNodeSet = function(n) {
-    return xpath.Value(t.NODE_SET, typeof n.length == "number" ? n : [n])
+    return xpath.Value(t.NODE_SET, n.unionWith ? n : new NodeSet(n));
 };
 
 var each         = xpath.util.each,
@@ -122,7 +133,7 @@ var each         = xpath.util.each,
 xpath.core.library = xpath.Library()
     .define("last",     t.NUMBER, [], function() { return this.last() })
     .define("position", t.NUMBER, [], function() { return this.position() })
-    .define("count",    t.NUMBER, [ t.NODE_SET ], function(nodeSet) { return nodeSet.length })
+    .define("count",    t.NUMBER, [ t.NODE_SET ], function(nodeSet) { return nodeSet.size() })
     .define("id",       t.NODE_SET,    [ t.STRING ], function(idString) {
             var ids = idString.split(xpath.lexer.re.whiteSpace),
                 nodes = [],
@@ -130,7 +141,7 @@ xpath.core.library = xpath.Library()
             for (var i = 0; i < ids.length; i++)
                 if (n = this.document.getElementById(ids[i]))
                     nodes.push(n);
-            return nodes;
+            return new NodeSet(nodes);
         })
     .define("id",       t.NODE_SET,    [ t.NODE_SET ], function(nodes) {
             var context = this,
@@ -149,7 +160,7 @@ xpath.core.library = xpath.Library()
         })
     .define("string", t.STRING, [ t.NODE_SET ], function(nodes) {
             /// @todo Return string-value of node that is FIRST in doc. order
-            return this.getStringValue(nodes[0]);
+            return this.getStringValue(nodes.get(0));
         })
     .define("string", t.STRING, [ t.STRING ], function(s) { return s })
     .define("string", t.STRING, [ t.NUMBER ], function(n) { return n.toString() })
@@ -208,7 +219,7 @@ xpath.core.library = xpath.Library()
     .define("boolean", t.BOOLEAN, [ t.NUMBER ], function(n) { return n != 0 || isNaN(n) })
     .define("boolean", t.BOOLEAN, [ t.STRING ], function(str) { return str.length != 0 })
     .define("boolean", t.BOOLEAN, [ t.BOOLEAN ], function(val) { return val })
-    .define("boolean", t.BOOLEAN, [ t.NODE_SET ], function(nodes) { return nodes.length != 0 })
+    .define("boolean", t.BOOLEAN, [ t.NODE_SET ], function(nodes) { return nodes.size() != 0 })
     .define("not", t.BOOLEAN, [ t.BOOLEAN ], function(val) { return !val })
     .define("true", t.BOOLEAN, [], function() { return true })
     .define("false", t.BOOLEAN, [], function() { return false })
@@ -225,7 +236,7 @@ xpath.core.library = xpath.Library()
     .define("sum", t.NUMBER, [ t.NODE_SET ], function(nodes) {
             var toNumber = xpath.core.number.unwrap([ t.NODE_SET ]),
                 sum = 0;
-            each(nodes, function() { sum += toNumber(this); });
+            nodes.each(function() { sum += toNumber(this); });
             return sum;
         })
     .define("floor", t.NUMBER, [ t.NUMBER ], function(n) { return Math.floor(n) })
@@ -233,6 +244,10 @@ xpath.core.library = xpath.Library()
     .define("round", t.NUMBER, [ t.NUMBER ], function(n) { return Math.round(n) })
     
     /* Functions NOT defined in the XPath 1 Spec. */
+    
+    /* Union 2 node-sets together. */
+    
+    .define("union", t.NODE_SET, [ t.NODE_SET, t.NODE_SET ], function(a, b) { return a.unionWith(b); })
     
     /* "equals" functions are used in = and != comparisons. */
     
@@ -379,25 +394,46 @@ xpath.core.library = xpath.Library()
         })
     ;
 
-function eachAsString(context, vals, cb) {
-    return each(vals, function(i) {
+/**
+ * Iterates over each node, giving the callback function the node's
+ * string-value.
+ *
+ * @param context An EvaluationContext to get the string-value from
+ * @param nodes A NodeSet to iterate over
+ * @param cb A function to callback at each iteration with the node's string value
+ */
+function eachAsString(context, nodes, cb) {
+    return nodes.each(function(i) {
             var str = context.getStringValue(this);
             return cb.call(str, i);
         });
 }
 
+/**
+ * Returns a sorted array of string-values of a NodeSet.
+ *
+ * @param context An EvaluationContext to get string-values from
+ * @param nodes A NodeSet to sort the string-values of
+ */
 function sortStringValues(context, nodes) {
     var vals = []
-    each(nodes, function() { vals.push(context.call("string", xpath.core.newNodeSet([this])).value); });
+    eachAsString(context, nodes, function() { vals.push(this); });
     vals.sort();
     return vals;
 }
 
+/**
+ * Apply the "equality" (an XPath function name) to each node, comparing it
+ * against val. If a test (applying the equality function) ever returns true,
+ * then true is returned, otherwise false is. The equality function should 
+ * return a BOOLEAN. If reverse is true, then the argument order will be 
+ * reversed so that val comes first and the node comes 2nd.
+ */
 function testEquality(context, equality, nodes, val, reverse) {
     var typeName = val.type.getTypeName();
-    return !each(nodes, function() {
-            if (!reverse && context.call(equality, context.call(typeName, xpath.core.newNodeSet([this])), val).value
-                || reverse && context.call(equality, val, context.call(typeName, xpath.core.newNodeSet([this]))).value)
+    return !nodes.each(function() {
+            if (!reverse && context.call(equality, context.call(typeName, xpath.core.newNodeSet(new NodeSet([this]))), val).value
+                || reverse && context.call(equality, val, context.call(typeName, xpath.core.newNodeSet(new NodeSet([this])))).value)
                 return false;
         });
 }
