@@ -102,6 +102,9 @@ xpath.util = {
         return l;
     },
     
+    /**
+     * Iterate over items in an array.
+     */
     each: function(list, cb, data) {
         for (var i = 0, len = list.length; i < len; i++)
             if (cb.call(list[i], i, data) === false)
@@ -109,6 +112,11 @@ xpath.util = {
         return true;
     },
     
+    /**
+     * Normalize whitespace in a string, as per XPath 1's rules. This will first
+     * strip off all leading and trailing whitespace. All consecutive whitespace
+     * is then reduced to 1 single space.
+     */
     normalizeWhiteSpace: function(str) {
         return str.replace(/(^[\u0020\u0009\u000D\u000A]+|[\u0020\u0009\u000D\u000A]+$)/g, "")
                   .replace(/[\u0020\u0009\u000D\u000A]+/g, " ");
