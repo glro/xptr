@@ -348,9 +348,6 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
 });
 
 
-var nop = function() { throw new Error("Unsupported operation."); }
-
-
 var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisitor, {
     init: function(evalContext) {
         this.context = evalContext;
@@ -626,7 +623,6 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         var nodeset = result.value;
         this.context.size = nodeset.size();
         this.context.iter = createNodeSetContextIterator(this.context, nodeset);
-        console.log(this.context.size);
         filter.predicates.accept(this);
         
         var result = [];
