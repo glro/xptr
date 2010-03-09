@@ -24,28 +24,7 @@ function isTextNode(n) { return n.nodeType == n.TEXT_NODE; }
 function isProcessingInstructionNode(n) { return n.nodeType == n.PROCESSING_INSTRUCTION_NODE; }
 function isAnyNode(n) { return true; }
 
-function createArrayContextIterator(context, nodes) {
-    return function(cb) {
-            for (var i = 0, len = nodes.length; i < len; i++) {
-                context.pos = i + 1;
-                context.item = nodes[i];
-                if (cb(context.item, context.pos) === false)
-                    return false;
-            }
-            return true;
-        };
-}
 
-function createNodeSetContextIterator(context, nodeSet) {
-    return function(cb) {
-            var pos = 1;
-            return nodeSet.each(function() {
-                    context.pos = pos++;
-                    context.item = this;
-                    return cb(context.item, context.pos);
-                });
-        };
-}
 
 // Local reference to xpath.core
 var core = xpath.core;
@@ -387,11 +366,13 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         if (path.isAbsolute) {
             this.context.size = 1;
             this.context.iter = createArrayContextIterator(this.context, [this.context.document]);
+        } else {
+            this.context.size = 1;
+            this.context.iter = createArrayContextIterator(this.context, [this.context.item]);
         }
         
-        for (var i = 0, numSteps = path.steps.length; i < numSteps; i++) {
+        for (var i = 0, numSteps = path.steps.length; i < numSteps; i++)
             path.steps[i].accept(this);
-        }
     },
     
     /* Process a step node. We do this by grabbing the appropriate axis guide.
@@ -868,5 +849,30 @@ xpath.interpreter.AxisGuide = Class({
     'ancestor-or-self': function(n, cb) { return this.ancestorOrSelf(n, cb); },
     'descendant-or-self': function(n, cb) { return this.descendantOrSelf(n, cb); }
 });
+
+
+function createArrayContextIterator(context, nodes) {
+    return function(cb) {
+            for (var i = 0, len = nodes.length; i < len; i++) {
+                context.pos = i + 1;
+                context.item = nodes[i];
+                if (cb(context.item, context.pos) === false)
+                    return false;
+            }
+            return true;
+        };
+}
+
+
+function createNodeSetContextIterator(context, nodeSet) {
+    return function(cb) {
+            var pos = 1;
+            return nodeSet.each(function() {
+                    context.pos = pos++;
+                    context.item = this;
+                    return cb(context.item, context.pos);
+                });
+        };
+}
 
 })();
