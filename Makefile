@@ -7,7 +7,7 @@ YUICOMPRESSOR=/opt/yuicompressor/yuicompressor-2.4.2.jar
 
 all: xpath-${VERSION}.js
 
-xpath-$(VERSION).js: lligen.js xpath.ast.js xpath.base.js xpath.core.js xpath.grammar.js xpath.interpreter.js xpath.js xpath.lexer.js xpath.parser.js xpath.symbol.js xpath.util.js
+xpath-$(VERSION).js: lligen.js xpath.js xpath.util.js xpath.symbol.js xpath.ast.js xpath.grammar.js xpath.parser.js xpath.base.js xpath.core.js xpath.interpreter.js xpath.lexer.js
 	mkdir -p ${BUILD_DIR}
 	cat $+ > ${BUILD_DIR}/xpath-${VERSION}.js
 	${JAVA} -jar ${YUICOMPRESSOR} ${BUILD_DIR}/xpath-${VERSION}.js -o ${BUILD_DIR}/xpath-${VERSION}-min.js
