@@ -574,7 +574,7 @@ xpath.core.axisGuides = {
         
         if (n.hasChildNodes())
             for (var k = n.lastChild; k; k = k.previousSibling)
-                if (xpath.core.axisGuides.reverseDescendant(k) === false)
+                if (xpath.core.axisGuides.reverseOrderDescendant(k, cb) === false)
                     return false;
         return cb(n) !== false;
     },
