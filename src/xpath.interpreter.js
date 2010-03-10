@@ -361,9 +361,6 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
         if (path.isAbsolute) {
             this.context.size = 1;
             this.context.iter = createArrayContextIterator(this.context, [this.context.document]);
-        } else {
-            this.context.size = 1;
-            this.context.iter = createArrayContextIterator(this.context, [this.context.item]);
         }
         
         for (var i = 0, numSteps = path.steps.length; i < numSteps; i++)
@@ -572,16 +569,23 @@ var XPathInterpreter = xpath.interpreter.Interpreter = Class(xpath.ast.ASTVisito
             var result = this.resultStack.pop();
             this.context.size = result.value.size();
             this.context.iter = createNodeSetContextIterator(this.context, result.value);
+        } else {
+            this.context.size = 1;
+            this.context.iter = createArrayContextIterator(this.context, [this.context.item]);
         }
-        if (pathExpr.path)
-            pathExpr.path.accept(this);
-        
-        var result = [];
-        this.context.contextIterator(function(n) {
-                result.push(n);
+
+        var result = [],
+            context = this.context,
+            interpreter = this;
+        this.context.contextIterator(function() {
+                context.pushContext();
+                pathExpr.path.accept(interpreter);
+                context.contextIterator(function(n) {
+                        result.push(n);
+                    });
+                context.popContext();
             });
         this.resultStack.push(core.newNodeSet(result));
-        
         this.context.popContext();
     },
     
