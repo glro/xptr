@@ -294,20 +294,6 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
         }
         
         return { 'localName': localName, 'namespaceURI': namespaceUri };
-     },
-     
-     getStringValue: function(node) {
-        if (node.nodeType == node.ELEMENT_NODE || node.nodeType == node.DOCUMENT_NODE) {
-            var iter = this.getAxisGuide("descendant"),
-                text = [];
-            iter(node, function(n) {
-                    if (n.nodeType == n.TEXT_NODE)
-                        text.push(n.nodeValue)
-                })
-            return text.join("");
-        } else {
-            return node.nodeValue;
-        }
      }
 });
 

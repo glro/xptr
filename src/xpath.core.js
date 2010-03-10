@@ -114,6 +114,20 @@ var NodeSet = xpath.core.NodeSet = xpath.util.Class({
 });
 
 
+var stringValue = xpath.core.stringValue = function(node) {
+    if (node.nodeType == node.ELEMENT_NODE || node.nodeType == node.DOCUMENT_NODE) {
+        var text = [];
+        xpath.core.axisGuides.descendant(node, function(n) {
+                if (n.nodeType == n.TEXT_NODE)
+                    text.push(n.nodeValue)
+            });
+        return text.join("");
+    } else {
+        return node.nodeValue;
+    }
+ };
+
+
 /**
  * Some constructor functions for core types...
  */
@@ -146,7 +160,7 @@ xpath.core.library = xpath.Library()
     .define("id",       t.NODE_SET,    [ t.NODE_SET ], function(nodes) {
             var context = this,
                 idstr = [];
-            each(nodes, function() { idstr.push(context.getStringValue(this)); })
+            each(nodes, function() { idstr.push(stringValue(this)); })
             return xpath.core.id.unwrap([ t.STRING ]).call(this, idstr.join(" "));
         })
     .define("local-name", t.STRING, [ t.NODE_SET ])
@@ -156,11 +170,11 @@ xpath.core.library = xpath.Library()
     .define("name", t.STING, [ t.NODE_SET ])
     .define("name", t.STING, [])
     .define("string", t.STRING, [], function() {
-            return this.getStringValue(this.dot());
+            return stringValue(this.dot());
         })
     .define("string", t.STRING, [ t.NODE_SET ], function(nodes) {
             /// @todo Return string-value of node that is FIRST in doc. order
-            return this.getStringValue(nodes.get(0));
+            return stringValue(nodes.get(0));
         })
     .define("string", t.STRING, [ t.STRING ], function(s) { return s })
     .define("string", t.STRING, [ t.NUMBER ], function(n) { return n.toString() })
@@ -199,7 +213,7 @@ xpath.core.library = xpath.Library()
             return str.length;
         })
     .define("normalize-space", t.STRING, [], function() {
-            return this.call("normalize-space", xpath.core.newString(this.getStringValue(this.dot()))).value;
+            return this.call("normalize-space", xpath.core.newString(stringValue(this.dot()))).value;
         })
     .define("normalize-space", t.STRING, [ t.STRING ], function(str) {
             return xpath.util.normalizeWhiteSpace(str);
@@ -404,7 +418,7 @@ xpath.core.library = xpath.Library()
  */
 function eachAsString(context, nodes, cb) {
     return nodes.each(function(i) {
-            var str = context.getStringValue(this);
+            var str = stringValue(this);
             return cb.call(str, i);
         });
 }
@@ -440,18 +454,8 @@ function testEquality(context, equality, nodes, val, reverse) {
 
 
 xpath.core.AxisGuideManager = xpath.util.Class({
-    init: function() {
-        this.axisGuide = new xpath.core.AxisGuide();
-    },
-    
     getAxisGuide: function(axis) {
-        if (!this.axisGuide[axis])
-            return null;
-
-        var axisGuide = this.axisGuide;
-        return function(n, cb) {
-            axisGuide[axis](n, cb);
-        };
+        return xpath.core.axisGuides[axis] || null;
     }
 });
 
@@ -483,8 +487,7 @@ xpath.core.AxisGuideManager = xpath.util.Class({
  * @note The Guide is meant to be subclassed (or an instance extended) to 
  * support new axes, should an implementation require it.
  */
-xpath.core.AxisGuide = xpath.util.Class({
-    init: function() { },
+xpath.core.axisGuides = {
     self: function(n, cb) {
         return cb(n) !== false;
     },
@@ -530,8 +533,8 @@ xpath.core.AxisGuide = xpath.util.Class({
     },
     following: function(n, cb) {
         for (; n; n = n.parentNode) {
-            if (this.followingSibling(n, function(sib) {
-                        return this.descendant-or-self(sib);
+            if (xpath.core.axisGuides.followingSibling(n, function(sib) {
+                        return xpath.core.axisGuides.descendantOrSelf(sib, cb);
                     }) === false)
                 return false;
         }
@@ -539,18 +542,18 @@ xpath.core.AxisGuide = xpath.util.Class({
     },
     preceding: function(n, cb) {
         for (; n; n = n.parentNode) {
-            if (this.precedingSibling(n, function(sib) {
-                        return this.reverseOrderDescendant(sib, cb);
+            if (xpath.core.axisGuides.precedingSibling(n, function(sib) {
+                        return xpath.core.axisGuides.reverseOrderDescendant(sib, cb);
                     }) === false)
                 return false;
         }
         return true;
     },
     ancestorOrSelf: function(n, cb) {
-        return cb(n) !== false && this.ancestor(n, cb) !== false;
+        return cb(n) !== false && xpath.core.axisGuides.ancestor(n, cb) !== false;
     },
     descendantOrSelf: function(n, cb) {
-        return cb(n) !== false && this.descendant(n, cb) !== false;
+        return cb(n) !== false && xpath.core.axisGuides.descendant(n, cb) !== false;
     },
     attribute: function(n, cb) {
         // Only ELEMENT node types have attributes
@@ -571,14 +574,22 @@ xpath.core.AxisGuide = xpath.util.Class({
         
         if (n.hasChildNodes())
             for (var k = n.lastChild; k; k = k.previousSibling)
-                if (this.reverseDescendant(k) === false)
+                if (xpath.core.axisGuides.reverseDescendant(k) === false)
                     return false;
         return cb(n) !== false;
     },
-    'following-sibling': function(n, cb) { return this.followingSibling(n, cb); },
-    'preceding-sibling': function(n, cb) { return this.precedingSibling(n, cb); },
-    'ancestor-or-self': function(n, cb) { return this.ancestorOrSelf(n, cb); },
-    'descendant-or-self': function(n, cb) { return this.descendantOrSelf(n, cb); }
-});
+    'following-sibling': function(n, cb) {
+        return xpath.core.axisGuides.followingSibling(n, cb);
+    },
+    'preceding-sibling': function(n, cb) {
+        return xpath.core.axisGuides.precedingSibling(n, cb);
+    },
+    'ancestor-or-self': function(n, cb) {
+        return xpath.core.axisGuides.ancestorOrSelf(n, cb);
+    },
+    'descendant-or-self': function(n, cb) {
+        return xpath.core.axisGuides.descendantOrSelf(n, cb);
+    }
+};
 
 })();
