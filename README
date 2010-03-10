@@ -31,7 +31,7 @@ new types to XPath (point and range), and several new functions. In order to
 implement XPointer then, this project requires an extensible version of XPath
 that will allow new types, functions and contexts. Current browser support for
 XPath does not allow for much in the way of extending XPath, either by adding
-functions or types. This meant the focus would have to shift to a client-side
+functions or types. This meant the focus would have to shift to a Javascript
 implementation.
 
 A sub-project of xptr, then, is to create an implementation of XPath that
@@ -88,4 +88,50 @@ way to use it is through the xpath function:
 xpath("//DIV[@class='section']")
 xpath("(//OL | //UL)/LI[position() = last() or position() = 1]")
 xpath("id('content')/*[self::H2 or self::H3]")
+
+4. Extending XPath with xpath
+
+To deal with extensions, xpath provides simple mechanisms to define new types
+and function libraries. All basic operations (+,-,*,div,mod,mul,|,=,!=,<,>,<=,
+>=,etc.) are equivalent to calling user-defined functions such as add(),
+modulus(), less-than(), equals(), etc. This allows extensions to easily add
+support for basic operations to their types as well. The easiest way to add a
+new function is by extending the core function library. 
+
+Let's say we wished to add a new function, has-class, that would return true if
+the current node had a specific class, given as a string. Though this is simple,
+XPath does not support such a test easily. For example, 
+
+    xpath("//*[contains(@class, 'selected')]")
+
+would return all nodes that have the class selected, but it would also return
+all nodes with the class 'not-selected'! Luckily, extending xpath to support
+such a function is simple:
+
+    xpath.core.library.define("has-class",               /* Function name */
+                          [ xpath.core.types.BOOLEAN ],  /* Return type */
+                          [ xpath.core.types.STRING ],   /* Argument types */
+                          function(klass) {              /* Implementation */
+        var node = this.dot(); // Returns the current context node
+        return new RegExp("(^|\\s)" + klass + "($|\\s)").test(node.className);
+    });
+
+We can then use this function in an XPath expression. For example:
+
+    xpath("//*[has-class('selected')")
+
+returns all nodes that have class 'selected'. The nice part is that xpath will
+handle type-checking for you. If you ran xpath("//*[has-class(id('foo'))]") then
+you would get an error telling you that has-class can't be called with a
+node-set argument. Of course, you can also override "has-class" to support
+node-sets:
+
+    xpath.core.library.define("has-class",               /* Function name */
+                          [ xpath.core.types.BOOLEAN ],  /* Return type */
+                          [ xpath.core.types.NODE_SET ], /* Argument types */
+                          function(nodeset) {            /* Implementation */
+        var node = this.dot(); // Returns the current context node
+        var klass = xpath.core.stringValue(nodeSet.get(0));
+        return new RegExp("(^|\\s)" + klass + "($|\\s)").test(node.className);
+    });
 
