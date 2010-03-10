@@ -492,9 +492,9 @@ xpath.core.axisGuides = {
         return cb(n) !== false;
     },
     parent: function(n, cb) {
-        if (!n.parentNode)
+        if (n.nodeType != Node.ATTRIBUTE_NODE ? !n.parentNode : !n.ownerElement)
             return true;
-        return cb(n.parentNode) !== false;
+        return cb(n.parentNode || n.ownerElement) !== false;
     },
     child: function(n, cb) {
         var kids = n.childNodes;
