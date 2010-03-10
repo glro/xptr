@@ -118,7 +118,7 @@ such a function is simple:
 
 We can then use this function in an XPath expression. For example:
 
-    xpath("//*[has-class('selected')")
+    xpath("//*[has-class('selected')]")
 
 returns all nodes that have class 'selected'. The nice part is that xpath will
 handle type-checking for you. If you ran xpath("//*[has-class(id('foo'))]") then
