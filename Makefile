@@ -1,5 +1,6 @@
+SOURCE_DIR = src
 BUILD_DIR = build
-VPATH = ./:$(BUILD_DIR)
+VPATH = $(SOURCE_DIR):$(BUILD_DIR)
 VERSION=1.0
 JAVA=java
 YUICOMPRESSOR=/opt/yuicompressor/yuicompressor-2.4.2.jar
