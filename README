@@ -1,1 +1,91 @@
-Javascript XPointer implementation
+xptr is a Pure Javascript XPointer Implementation
+
+1. Motivation
+
+xptr aims to be a complete Javascript implementation of the XPointer standard.
+XPointer is very similar to XPath, but extends it by providing support for 2
+new types: points & ranges. Points and ranges basically allow you to reference
+not just DOM Nodes, but actual points or ranges of *text* within a DOM.
+
+Most browser provide some sort of selection range support; XPointer is just an
+extension of XPath to support these types of ranges. Being able to convert
+between browser selection ranges and XPointer is one of the goals of this
+project. This would allow user-selected ranges to be persisted in a standard
+format, which could be used by server-side or other client-side code.
+
+Some examples of ways this could be used:
+
+- Client-side, _browser agnostic_ support of the Annotea standard (this is the
+  primary end-goal of this project)
+
+- Client-side library that parses the local anchor part of a URL as an XPointer
+  expression and scrolls the page to this point (robust anchors)
+
+- Persist user text selections across requests in a standard way
+
+2. Yet Another XPath Implementation
+
+XPointer supports different schemes for identifying points and ranges. The most
+versatile and robust is an extension XPath. XPointer extends XPath by adding 2
+new types to XPath (point and range), and several new functions. In order to
+implement XPointer then, this project requires an extensible version of XPath
+that will allow new types, functions and contexts. Current browser support for
+XPath does not allow for much in the way of extending XPath, either by adding
+functions or types. This meant the focus would have to shift to a client-side
+implementation.
+
+A sub-project of xptr, then, is to create an implementation of XPath that
+focuses on extensibility. This includes adding new types, overriding existing
+functions for new types, as well as creating new functions that use existing
+types and new types as arguments and return values. The sub-project is entitled
+xpath for now (yep, pretty lame).
+
+2. Current Status
+
+2.1 Lligen LL(1) Parser Generator
+
+Both xptr and xpath required a parser, so a simple, pure Javascript, LL(1)
+parser generator was implemented that uses a simple DSL to define grammars in 
+Javascript. As of right now, the entire parser is recreated from the Grammar 
+each time the xpath library is loaded. The next step for the parser is to create
+a mechanism to write static versions of the parser as a Javascript file, with
+the parse table and everything already filled out. This will save start-up time
+and download size (since the parser generator won't be included any more).
+
+2.2 xpath Extensible Javascript XPath Implementation
+
+The focus right now is to get the extensible implementation of XPath workinging
+correctly. As of now, the parser is largely complete. It can handle all-but-one
+axes, most functions, all node type tests, and all expressions and predicates.
+Namespace support will be the next major feature added. There are also no unit
+tests as of right now and this needs to be rectified ASAP.
+
+2.3 xptr Javascript XPointer Implementation
+
+Work on the XPointer implementation has not started yet. Once the XPath
+implementation is stable and has been tested, work will start on xptr.
+
+3. Building the Library
+
+By default, the library is split across many Javascript files. You could
+include all of these in your web site if you wish, but it is better to build the
+merged and minified versions and use those. To build the library, simply run:
+
+make
+
+In the top level directory. You will probably need to edit the Makefile and
+change the location of the YUI Compressor JAR file. This will create a new 
+directory, build/, with 2 files in it. One is just a big merged version of all
+the Javascript files. The other is a minified version of the merged file.
+
+3. Using the Library
+
+As of right now, you can run some non-trivial XPath expressions. The interface
+is very basic right now and does not attempt to follow the DOM 3 XPath
+specification of the APIs (though support for this may come later). The easiest
+way to use it is through the xpath function:
+
+xpath("//DIV[@class='section']")
+xpath("(//OL | //UL)/LI[position() = last() or position() = 1]")
+xpath("id('content')/*[self::H2 or self::H3]")
+
