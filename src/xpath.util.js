@@ -120,6 +120,17 @@ xpath.util = {
     normalizeWhiteSpace: function(str) {
         return str.replace(/(^[\u0020\u0009\u000D\u000A]+|[\u0020\u0009\u000D\u000A]+$)/g, "")
                   .replace(/[\u0020\u0009\u000D\u000A]+/g, " ");
+    },
+    
+    isArray: function(obj) {
+        return obj instanceof Array
+            || Object.prototype.toString.call(obj) == "[object Array]";
+    },
+    
+    isList: function(obj) {
+        return xpath.util.isArray(obj)
+            || obj instanceof NodeList
+            || Object.prototype.toString.call(obj) == "[object NodeList]";
     }
 };
 

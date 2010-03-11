@@ -37,12 +37,12 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
      * Constructs the evaluation context. This context takes the initial context
      */
     init: function(ctxt, vars) {
-        vars = vars || {};
-        ctxt = Object.prototype.toString.call(ctxt) == "[object Array]" ? ctxt : [ctxt];
+        ctxt = xpath.util.isList(ctxt) ? ctxt : [ctxt];
         if (ctxt.length == 0)
             /// @todo Throw proper XPath error
             throw new Error("Context size cannot be 0");
         
+        // Used by pushContext()/popContext()
         this.contextStack = [];
         
         // The current item being processed - this will always be a node
@@ -61,12 +61,13 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
         // An object w/ QName: Value pairs for each variable in the expression.
         // Variables can also be functions. If they are, then the value returned
         // will be the return value of calling the function, the context as this
-        this.variables = extend(vars, {
+        this.variables = extend({}, vars || {}, {
             dot: this.dot,              // $dot
             position: this.position,    // $position
             last: this.last,            // $last
         });
         
+        // Function library
         this.functions = xpath.core.library;
         
         // The owning document of the context items/nodes
@@ -77,6 +78,8 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
         
         // Separates the axis guide from the interpreter implementation
         this.axisGuideManager = new xpath.core.AxisGuideManager();
+        
+        this.namespaceResolver = this.document;
     },
     
     
@@ -172,7 +175,7 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
             return core.newString(value);
         default:
             // We'll naively assume its elements are nodes for now
-            if (typeof value.length == "number")
+            if (xpath.util.isList(value))
                 return core.newNodeSet(value);
         }
         // Can't convert the variable's value to a known type.
@@ -204,7 +207,7 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
         var func = this.functions.getFunction(funcName);
         if (typeof func == "undefined")
             throw new Error("The function '" + funcName + "' does not exist.");
-        if (typeof args.length != "number")
+        if (!xpath.util.isArray(args))
             args = Array.prototype.slice.call(arguments, 1);
         return func.apply(this, args);
      },
@@ -279,7 +282,7 @@ var EvaluationContext = xpath.interpreter.EvaluationContext = Class({
             var parts = node.nodeName.split(":");
             if (parts.length > 1) {
                 localName = parts[1];
-                namespaceUri = this.document.lookupNamespaceURI(parts[0]);
+                namespaceUri = node.lookupNamespaceURI(parts[0]);
             } else {
                 localName = parts[0];
             }
