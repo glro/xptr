@@ -109,7 +109,7 @@ all nodes with the class 'not-selected'! Luckily, extending xpath to support
 such a function is simple:
 
     xpath.core.library.define("has-class",               /* Function name */
-                          [ xpath.core.types.BOOLEAN ],  /* Return type */
+                          xpath.core.types.BOOLEAN,      /* Return type */
                           [ xpath.core.types.STRING ],   /* Argument types */
                           function(klass) {              /* Implementation */
         var node = this.dot(); // Returns the current context node
@@ -127,7 +127,7 @@ node-set argument. Of course, you can also override "has-class" to support
 node-sets:
 
     xpath.core.library.define("has-class",               /* Function name */
-                          [ xpath.core.types.BOOLEAN ],  /* Return type */
+                          xpath.core.types.BOOLEAN,      /* Return type */
                           [ xpath.core.types.NODE_SET ], /* Argument types */
                           function(nodeset) {            /* Implementation */
         var node = this.dot(); // Returns the current context node
