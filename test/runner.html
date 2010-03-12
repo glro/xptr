@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+<title>Parse Table Construction</title>
+<link rel="stylesheet" type="text/css" href="third-party/qunit.css" />
+<script type="text/javascript" src="../build/xpath-1.0-min.js"></script>
+<script type="text/javascript" src="third-party/jquery-1.4.2.min.js"></script>
+<script type="text/javascript" src="third-party/qunit.js"></script>
+<script>
+$(document).ready(function() {
+    cars = document.implementation.createDocument("", "cars", null);
+    cars.load("cars.xml");
+    
+    module("xpath.util");
+    
+    test("binarySearch", function() {
+        equals(xpath.util.binarySearch([], 0), 0, "Empty array");
+        ok(xpath.util.binarySearch([1], 2) == 1 && xpath.util.binarySearch([1], 0) == 0, "List of 1");
+        equals(xpath.util.binarySearch([1,2,3,4,5], 99), 5, "Search for maximal value");
+        equals(xpath.util.binarySearch([1,2,3,4,5], -2), 0, "Search for minimal value");
+        equals(xpath.util.binarySearch([1,2,3,4], 2), 1, "Even sized list, odd index");
+        equals(xpath.util.binarySearch([1,2,3,4], 1), 0, "Even sized list, even index");
+        equals(xpath.util.binarySearch([1,2,3,4,5], 2), 1, "Odd sized list, odd index");
+        equals(xpath.util.binarySearch([1,2,3,4,5], 1), 0, "Odd sized list, even index");
+        
+        var bigList = [];
+        for (var i = 0; i < 1000; i++)
+            bigList[i] = i * 2;
+        equals(xpath.util.binarySearch(bigList, 333), 167, "Value not in big list");
+        equals(xpath.util.binarySearch(bigList, 788), 394, "Value in big list");
+        
+        var reverseCmp = function(a, b) { return b < a ? -1 : 1; };
+        bigList.reverse();
+        // Note: the index SHOULD be floor(1000 - value / 2 + 1)
+        equals(xpath.util.binarySearch(bigList, 33, reverseCmp), 983, "Custom cmp, value not in list");
+        equals(xpath.util.binarySearch(bigList, 900, reverseCmp), 549, "Custom cmp, value in list");
+    });
+});
+</script>
+</head>
+<body>
+
+<h1 id="qunit-header">xpath Test Runner</h1>
+<h2 id="qunit-banner"></h2>
+<h2 id="qunit-userAgent"></h2>
+<ol id="qunit-tests"></ol>
+
+</body>
+</html>

@@ -1,0 +1,116 @@
+<?xml version="1.0"?>
+<cars
+    xmlns="http://example.com/cars"
+    xmlns:color="http://example.com/color"
+    xmlns:date="http://example.com/date"
+    xmlns:engine="http://example.com/engine"
+    xmlns:m="http://example.com/metrics">
+    <car>
+        <make>Nissan</make>
+        <model>Altima</model>
+        <trim>2.5S</trim>
+        <date:year>2009</date:year>
+        <color>
+            <color:rgb r="255" g="0" b="0" />
+        </color>
+        <type>Coupe</type>
+        <drivetrain type="ff">
+            <transmission type="standard">
+                <gears>6</gears>
+                <differential>open</differential>
+            </transmission>
+            <engine:engine>
+                <engine:code>QR25DE</engine:code>
+                <engine:type>I4</engine:type>
+                <engine:size>
+                    <capacity>
+                        <m:volume units="cc">2500</m:volume>
+                    </capacity>
+                    <bore>
+                        <m:length units="mm">89</m:length>
+                    </bore>
+                    <stroke>
+                        <m:length units="mm">100</m:length>
+                    </stroke>
+                </engine:size>
+                <engine:compression>
+                    <m:ratio numerator="9.5" denominator="1" />
+                </engine:compression>
+                <m:power units="hp">175</m:power>
+                <m:torque units="lb-ft">180</m:torque>
+            </engine:engine>
+        </drivetrain>
+    </car>
+    <car>
+        <make>Nissan</make>
+        <model>Altima</model>
+        <trim>GXE</trim>
+        <date:year>1998</date:year>
+        <color>
+            <color:rgb r="100" g="100" b="100" />
+        </color>
+        <type>Sedan</type>
+        <drivetrain type="ff">
+            <transmission type="standard">
+                <gears>5</gears>
+                <differential>open</differential>
+            </transmission>
+            <engine:engine>
+                <engine:code>KA24DE</engine:code>
+                <engine:type>I4</engine:type>
+                <engine:size>
+                    <capacity>
+                        <m:volume units="cc">2389</m:volume>
+                    </capacity>
+                    <bore>
+                        <m:length units="mm">89</m:length>
+                    </bore>
+                    <stroke>
+                        <m:length units="mm">96</m:length>
+                    </stroke>
+                </engine:size>
+                <engine:compression>
+                    <m:ratio numerator="9.5" denominator="1" />
+                </engine:compression>
+                <m:power units="hp">155</m:power>
+                <m:torque units="lb-ft">154</m:torque>
+            </engine:engine>
+        </drivetrain>
+    </car>
+    <car>
+        <make>Nissan</make>
+        <model>Altima</model>
+        <trim>SE</trim>
+        <date:year>1995</date:year>
+        <color>
+            <color:rgb r="0" g="200" b="100" />
+        </color>
+        <type>Sedan</type>
+        <drivetrain type="ff">
+            <transmission type="standard">
+                <gears>5</gears>
+                <differential>open</differential>
+            </transmission>
+            <engine:engine>
+                <engine:code>KA24DE</engine:code>
+                <engine:type>I4</engine:type>
+                <engine:size>
+                    <capacity>
+                        <m:volume units="cc">2389</m:volume>
+                    </capacity>
+                    <bore>
+                        <m:length units="mm">89</m:length>
+                    </bore>
+                    <stroke>
+                        <m:length units="mm">96</m:length>
+                    </stroke>
+                </engine:size>
+                <engine:compression>
+                    <m:ratio numerator="9.5" denominator="1" />
+                </engine:compression>
+                <m:power units="hp">150</m:power>
+                <m:torque units="lb-ft">154</m:torque>
+            </engine:engine>
+        </drivetrain>
+    </car>
+</cars>

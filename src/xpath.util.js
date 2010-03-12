@@ -82,19 +82,17 @@ xpath.util = {
      *
      * @param list An array to search for val within
      * @param val The value to search for in the array
-     * @param l The lower bound (inclusive) of the array to search in
-     * @param r The upper bound (exclusive) of the array to search in
      * @param cmp A comparator to use to determine ordering
      * @return The index of val in the list (or where it should go)
      */
-    binarySearch: function(list, val, l, r, cmp) {
-        l = l || 0;
-        r = (!r || r <= l) ? list.length : r;
+    binarySearch: function(list, val, cmp) {
+        var l = 0;
+        var r = list.length;
         while (l < r) {
             c = Math.floor((l + r) / 2);
             if (list[c] == val)
                 return c;
-            if (cmp && cmp(list[c], val) < 0 || list[c] < val)
+            if (cmp ? cmp(list[c], val) < 0 : list[c] < val)
                 l = c + 1;
             else
                 r = c;

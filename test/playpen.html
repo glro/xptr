@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+<title>Parse Table Construction</title>
+<script type="text/javascript" src="../build/xpath-1.0-min.js"></script>
+<script type="text/javascript" src="../doc/jquery-1.3.2.min.js"></script>
+<script>
+    cars = document.implementation.createDocument("", "cars", null);
+    cars.load("cars.xml");
+</script>
+</head>
+<body>
+<h1>Playpen</h1>
+<p>Open up Firebug console and play around with <strong>xpath</strong> and 
+the global variable <code>cars</code> (<a href="cars.xml">which is just cars.xml</a>).</p>
+
+<p>Try running some of the following:</p>
+<ul>
+    <li><code>xpath("//car[make='Nissan' and type='Sedan']", cars)</code></li>
+</ul>
+</body>
+</html>
